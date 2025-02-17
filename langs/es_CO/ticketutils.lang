@@ -1,0 +1,40 @@
+# Dolibarr language file - es_CO 
+CHARSET=UTF-8
+
+Module20931152Name = TicketUtils
+Module20931152Desc = Utilidades generales para el módulo de tickets
+
+TicketUtilsSetup = Configuración Ticketutils
+
+ChangeTicketStatus = Cambiar estado del ticket
+ChangeTicketStatusTo = Cambiar estado del ticket a %s
+
+TicketStatusRead = Leído
+TicketStatusUnread = No leído
+TicketStatusAssigned = Asignado
+TicketStatusInProgress = En progreso
+TicketStatusOnHold = En espera
+TicketStatusNeedMoreInformationShort = Esperando comentarios
+TicketStatusSolvedClosed = Resuelto
+TicketStatusCanceled = Abandonado
+
+Observations = Observaciones
+
+TicketStatusChangedTo = Estado del ticket %s cambiado a %s
+ErrorChangingTicketStatus = Error al cambiar el estado del ticket
+TicketStatusChanged = Estado del ticket cambiado
+
+#
+# SETUP
+#
+
+SetupRequireChangeStatusNote = Requerir una nota al cambiar el estado del ticket
+SetupTicketMessageShowCharacterCount = Mostrar contador de caracteres en el mensaje del ticket
+SetupInactiveTicketNotification = Enviar notificaciones para tickets inactivos
+SetupHelpRequest = Opción para realizar una solicitud de apoyo a otro usuario
+SetupStatistics = Vista de estadísticas adicionales sobre los tickets
+SetupValidationStatus = Añadir estado "Esperando validación" para aprobación de parte del cliente
+SetupSelectCompany = Permitir escoger una empresa específica cuando el correo con el que se crea un ticket pertenece a varios contactos
+SetupOnlyOneId = Usar la referencia del ticket como único identificador
+SetupAlterStatusLogic = Alterar lógica general de los estados de los tickets
+SetupValidationStatusClosingTimeHours = Tiempo de espera antes de cerrar el ticket cuando se encuentra esperando validación (horas)
