@@ -4,6 +4,7 @@
 $hooks_route = DOL_DOCUMENT_ROOT . '/custom/ticketutils/class/hooks';
 
 require_once $hooks_route . '/ticketutils_ticket_card_hooks.class.php';
+require_once $hooks_route . '/ticketutils_create_ticket_hooks.class.php';
 
 require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_strings.class.php';
 
@@ -96,23 +97,35 @@ class ActionsTicketUtils
                 if ($action == 'set_read' || $action == 'confirm_set_status')
                 {
                     $new_status = GETPOST('new_status');
-        
+
                     if ($action == 'set_read')
                     {
                         $new_status = Ticket::STATUS_READ;
                     }
-                    
+
                     $res = TicketUtilsTicketCardHooks::confirm_change_status($object, $new_status);
-    
+
                     if ($res > 0)
                     {
                         $action = '';
                     }
-    
+
                     return $res;
                 }
             }
-            
+        }
+    }
+
+    function formObjectOptions($parameters, &$object, &$action, $hookmanager)
+    {
+        global $object;
+        
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('publicnewticketcard', $param_context))
+        {
+            TicketUtilsCreateTicketHooks::fix_show_errors($object);
+            TicketUtilsCreateTicketHooks::add_message_character_count();
         }
     }
 }

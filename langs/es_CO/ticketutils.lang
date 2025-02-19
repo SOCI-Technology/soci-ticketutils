@@ -24,6 +24,8 @@ TicketStatusChangedTo = Estado del ticket %s cambiado a %s
 ErrorChangingTicketStatus = Error al cambiar el estado del ticket
 TicketStatusChanged = Estado del ticket cambiado
 
+Characters = Caracteres
+
 #
 # SETUP
 #

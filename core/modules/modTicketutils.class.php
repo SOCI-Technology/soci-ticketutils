@@ -63,7 +63,8 @@ class modTicketutils extends DolibarrModules
 				'ticketcard',
 				'thirdpartyticket',
 				'projectticket',
-				'ticketlist'
+				'ticketlist',
+				'publicnewticketcard'
 			)
 		);
 		// Config pages. Put here list of php page names stored in admmin directory used to setup module.
