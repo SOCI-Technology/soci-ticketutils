@@ -4,6 +4,7 @@
 $hooks_route = DOL_DOCUMENT_ROOT . '/custom/ticketutils/class/hooks';
 
 require_once $hooks_route . '/ticketutils_ticket_card_hooks.class.php';
+require_once $hooks_route . '/ticketutils_ticket_list_hooks.class.php';
 require_once $hooks_route . '/ticketutils_create_ticket_hooks.class.php';
 
 require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_strings.class.php';
@@ -113,19 +114,70 @@ class ActionsTicketUtils
                     return $res;
                 }
             }
+
+            if ($conf->global->TICKETUTILS_ONLY_ONE_ID)
+            {
+                TicketUtilsTicketCardHooks::hide_public_track_id();
+            }
+        }
+
+        if (in_array('ticketlist', $param_context))
+        {
+            if ($conf->global->TICKETUTILS_ONLY_ONE_ID)
+            {
+                TicketUtilsTicketListHooks::hide_public_track_id();
+            }
+        }
+
+        if (in_array('publicnewticketcard', $param_context))
+        {
+            if ($action == 'create_ticket' && GETPOST('save', 'alpha'))
+            {
+                if ($conf->global->TICKETUTILS_ONLY_ONE_ID)
+                {
+                    TicketUtilsCreateTicketHooks::replace_create_ticket($object, $action);
+                    return 1;
+                }
+            }
         }
     }
 
     function formObjectOptions($parameters, &$object, &$action, $hookmanager)
     {
         global $object;
-        
+
         $param_context = explode(':', $parameters['context']);
 
         if (in_array('publicnewticketcard', $param_context))
         {
             TicketUtilsCreateTicketHooks::fix_show_errors($object);
             TicketUtilsCreateTicketHooks::add_message_character_count();
+        }
+    }
+
+    function setContentSecurityPolicy($parameters, &$object, &$action, $hookmanager)
+    {
+        $param_context = explode(':', $parameters['context']);
+
+        $url_params = '';
+
+        foreach ($_GET as $key => $value)
+        {
+            $url_params .= $key . '=' . $value . '&';
+        }
+        
+        if (in_array('ticketpubliclist', $param_context))
+        {
+            header('Location: ' . DOL_URL_ROOT . '/custom/ticketutils/public/ticket/list.php?' . $url_params);
+
+            exit();
+        }
+
+        if (in_array('ticketpublicview', $param_context))
+        {
+            header('Location: ' . DOL_URL_ROOT . '/custom/ticketutils/public/ticket/view.php?' . $url_params);
+
+            exit();
         }
     }
 }

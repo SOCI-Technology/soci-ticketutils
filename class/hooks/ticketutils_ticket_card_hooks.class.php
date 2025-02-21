@@ -55,4 +55,13 @@ class TicketUtilsTicketCardHooks
 
         return 1;
     }
+
+    public static function hide_public_track_id()
+    {
+        global $langs;
+
+        echo '<input type="hidden" id="ticketutils_track_id_label" value="' . $langs->trans('TicketTrackId') . '">';
+
+        echo '<script src="' . DOL_URL_ROOT . '/custom/ticketutils/js/hide_public_track_id.js"></script>';
+    }
 }

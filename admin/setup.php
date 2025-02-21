@@ -76,24 +76,6 @@ echo '</tr>';
  */
 
 /**
- * TICKET MESSAGE SHOW CHARACTER COUNT
- */
-echo '<tr>';
-
-echo '<td>';
-echo $langs->trans('SetupTicketMessageShowCharacterCount');
-echo '</td>';
-
-echo '<td>';
-echo SociConstField::print('TICKETUTILS_TICKET_MESSAGE_SHOW_CHARACTER_COUNT', 'boolean', $setup_action);
-echo '</td>';
-
-echo '</tr>';
-/**
- * END TICKET MESSAGE SHOW CHARACTER COUNT
- */
-
-/**
  * INACTIVE TICKET NOTIFICATION
  */
 echo '<tr>';
