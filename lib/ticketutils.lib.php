@@ -32,8 +32,13 @@ class TicketUtilsLib
      */
     public static function change_ticket_status($ticket, $new_status, $user, $message = null)
     {
-        global $db, $langs;
+        global $db, $langs, $conf;
 
+        if ($conf->global->TICKETUTILS_ALTER_STATUS_LOGIC)
+        {
+            TicketUtilsLib::replace_ticket_status($ticket);
+        }
+        
         $now = date('Y-m-d H:i:s', dol_now());
 
         $sql = "UPDATE " . MAIN_DB_PREFIX . "ticket";
@@ -56,7 +61,7 @@ class TicketUtilsLib
             return -1;
         }
 
-        $label = $langs->trans('TicketStatusChangedTo', $ticket->ref, $langs->transnoentitiesnoconv('TicketStatus' . $ticket->statuts[$new_status]));
+        $label = $langs->trans('TicketStatusChangedTo', $ticket->ref, $langs->transnoentitiesnoconv($ticket->statuts[$new_status]));
         $message = $message ?: $label;
 
         $res = self::create_ticket_event($ticket, $message, $label, $user);
@@ -104,5 +109,111 @@ class TicketUtilsLib
         $res = $event->create($user);
 
         return $res;
+    }
+
+    /**
+     * @param   Ticket  $ticket
+     */
+    public static function replace_ticket_status(&$ticket, $context = '')
+    {
+        global $langs;
+
+        $langs->load('ticketutils@ticketutils');
+
+        // print_r($ticket->statuts);
+
+        $labels = [
+            Ticket::STATUS_NOT_READ => 'TicketStatusNotAssigned',
+            Ticket::STATUS_READ => 'TicketStatusRead',
+            Ticket::STATUS_ASSIGNED => 'TicketStatusAssigned',
+            Ticket::STATUS_IN_PROGRESS => 'TicketStatusInProgress',
+            Ticket::STATUS_WAITING => 'TicketStatusWaiting',
+            Ticket::STATUS_NEED_MORE_INFO => 'TicketStatusWaitingValidation',
+            Ticket::STATUS_CLOSED => 'TicketStatusClosed',
+            Ticket::STATUS_CANCELED => 'TicketStatusAbandoned'
+        ];
+
+        if ($context == 'ticketcard')
+        {
+            unset($labels[Ticket::STATUS_READ], $labels[Ticket::STATUS_ASSIGNED]);
+
+            if ($ticket->status != Ticket::STATUS_NOT_READ)
+            {
+                unset($labels[Ticket::STATUS_NOT_READ]);
+            }
+            if ($ticket->status == Ticket::STATUS_NOT_READ)
+            {
+                unset($labels[Ticket::STATUS_IN_PROGRESS]);
+            }
+
+        }
+
+        $ticket->statuts = $labels;
+        $ticket->statuts_short = $labels;
+    }
+
+    /**
+     *    Mark a message as read
+     *
+     *    @param    Ticket	$ticket
+     *    @param    User	$user				Object user
+     *    @param    int 	$id_assign_user		ID of user assigned
+     *    @param    int 	$notrigger        	Disable trigger
+     *    @return   int							<0 if KO, 0=Nothing done, >0 if OK
+     */
+    public static function replace_ticket_assign_user($ticket, $user, $id_assign_user, $notrigger = 0)
+    {
+        global $conf, $langs;
+
+        $error = 0;
+
+        $ticket->oldcopy = dol_clone($ticket);
+
+        $ticket->db->begin();
+
+        $sql = "UPDATE " . MAIN_DB_PREFIX . "ticket";
+        if ($id_assign_user > 0)
+        {
+            $sql .= " SET fk_user_assign=" . ((int) $id_assign_user) . ", fk_statut = " . Ticket::STATUS_IN_PROGRESS;
+        }
+        else
+        {
+            $sql .= " SET fk_user_assign=null, fk_statut = " . Ticket::STATUS_NOT_READ;
+        }
+        $sql .= " WHERE rowid = " . ((int) $ticket->id);
+
+        dol_syslog(get_class($ticket) . "::assignUser sql=" . $sql);
+        $resql = $ticket->db->query($sql);
+
+        if (!$resql)
+        {
+            $ticket->db->rollback();
+            $ticket->error = $ticket->db->lasterror();
+            dol_syslog(get_class($ticket) . "::assignUser " . $ticket->error, LOG_ERR);
+            return -1;
+        }
+
+        $ticket->fk_user_assign = $id_assign_user; // May be used by trigger
+
+        if (!$notrigger)
+        {
+            // Call trigger
+            $result = $ticket->call_trigger('TICKET_ASSIGNED', $user);
+            if ($result < 0)
+            {
+                $error++;
+            }
+        }
+
+        if ($error)
+        {
+            $ticket->db->rollback();
+            $ticket->error = join(',', $ticket->errors);
+            dol_syslog(get_class($ticket) . "::assignUser " . $ticket->error, LOG_ERR);
+            return -1;
+        }
+
+        $ticket->db->commit();
+        return 1;
     }
 }

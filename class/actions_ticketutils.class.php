@@ -7,6 +7,8 @@ require_once $hooks_route . '/ticketutils_ticket_card_hooks.class.php';
 require_once $hooks_route . '/ticketutils_ticket_list_hooks.class.php';
 require_once $hooks_route . '/ticketutils_create_ticket_hooks.class.php';
 
+require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/lib/ticketutils.lib.php';
+
 require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_strings.class.php';
 
 if ($user->rights->debugbar->read)
@@ -66,7 +68,7 @@ class ActionsTicketUtils
 
         if ($langs)
         {
-            $langs->load('warranty@warranty');
+            $langs->load('ticketutils@ticketutils');
         }
 
         $this->db = $db;
@@ -93,6 +95,16 @@ class ActionsTicketUtils
 
         if (in_array('ticketcard', $param_context))
         {
+            if ($conf->global->TICKETUTILS_ALTER_STATUS_LOGIC)
+            {
+                TicketUtilsLib::replace_ticket_status($object, 'ticketcard');
+
+                if ($action == 'assign_user')
+                {
+                    return TicketUtilsTicketCardHooks::replace_assign_user($object);
+                }
+            }
+            
             if ($conf->global->TICKETUTILS_REQUIRE_CHANGE_STATUS_NOTE)
             {
                 if ($action == 'set_read' || $action == 'confirm_set_status')
@@ -165,7 +177,7 @@ class ActionsTicketUtils
         {
             $url_params .= $key . '=' . $value . '&';
         }
-        
+
         if (in_array('ticketpubliclist', $param_context))
         {
             header('Location: ' . DOL_URL_ROOT . '/custom/ticketutils/public/ticket/list.php?' . $url_params);
@@ -178,6 +190,23 @@ class ActionsTicketUtils
             header('Location: ' . DOL_URL_ROOT . '/custom/ticketutils/public/ticket/view.php?' . $url_params);
 
             exit();
+        }
+    }
+
+    function LibStatut($parameters, &$object, &$action, $hookmanager)
+    {
+        global $conf;
+        
+        $param_context = explode(':', $parameters['context']);
+        
+        if (get_class($object) == Ticket::class)
+        {
+            if ($conf->global->TICKETUTILS_ALTER_STATUS_LOGIC)
+            {
+                $context = in_array('ticketcard', $param_context) ? 'ticketcard' : '';
+                
+                TicketUtilsLib::replace_ticket_status($object, $context);
+            }
         }
     }
 }

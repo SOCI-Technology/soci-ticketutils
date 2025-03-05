@@ -9,14 +9,23 @@ TicketUtilsSetup = Configuración Ticketutils
 ChangeTicketStatus = Cambiar estado del ticket
 ChangeTicketStatusTo = Cambiar estado del ticket a %s
 
+# TicketStatusRead = Leído
+# TicketStatusUnread = No leído
+# TicketStatusAssigned = Asignado
+# TicketStatusInProgress = En progreso
+# TicketStatusOnHold = En espera
+# TicketStatusNeedMoreInformationShort = Esperando comentarios
+# TicketStatusSolvedClosed = Resuelto
+# TicketStatusCanceled = Abandonado
+
 TicketStatusRead = Leído
-TicketStatusUnread = No leído
+TicketStatusNotAssigned = No asignado
 TicketStatusAssigned = Asignado
 TicketStatusInProgress = En progreso
-TicketStatusOnHold = En espera
-TicketStatusNeedMoreInformationShort = Esperando comentarios
-TicketStatusSolvedClosed = Resuelto
-TicketStatusCanceled = Abandonado
+TicketStatusWaiting = En espera
+TicketStatusWaitingValidation = Esperando validación
+TicketStatusClosed = Resuelto
+TicketStatusAbandoned = Abandonado
 
 Observations = Observaciones
 
@@ -25,6 +34,8 @@ ErrorChangingTicketStatus = Error al cambiar el estado del ticket
 TicketStatusChanged = Estado del ticket cambiado
 
 Characters = Caracteres
+
+TicketUnassigned = El ticket ya no está asignado
 
 #
 # SETUP
