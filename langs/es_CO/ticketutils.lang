@@ -37,6 +37,9 @@ Characters = Caracteres
 
 TicketUnassigned = El ticket ya no está asignado
 
+AcceptSolution = Aceptar solución
+RejectSolution = Rechazar solución
+
 #
 # SETUP
 #

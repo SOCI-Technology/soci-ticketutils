@@ -38,7 +38,7 @@ class TicketUtilsLib
         {
             TicketUtilsLib::replace_ticket_status($ticket);
         }
-        
+
         $now = date('Y-m-d H:i:s', dol_now());
 
         $sql = "UPDATE " . MAIN_DB_PREFIX . "ticket";
@@ -70,6 +70,18 @@ class TicketUtilsLib
         {
             $db->rollback();
             return -1;
+        }
+
+        if ($conf->global->TICKETUTILS_VALIDATION_STATUS && $new_status == Ticket::STATUS_NEED_MORE_INFO)
+        {
+            try
+            {
+                self::notify_awaiting_validation($ticket);
+            }
+            catch (Exception $e)
+            {
+                dol_syslog('Error sending email: ' . $e->getMessage(), LOG_ERR);
+            }
         }
 
         $db->commit();
@@ -146,6 +158,10 @@ class TicketUtilsLib
                 unset($labels[Ticket::STATUS_IN_PROGRESS]);
             }
 
+            if ($ticket->status == Ticket::STATUS_NEED_MORE_INFO)
+            {
+                unset($labels[Ticket::STATUS_IN_PROGRESS], $labels[Ticket::STATUS_WAITING]);
+            }
         }
 
         $ticket->statuts = $labels;
@@ -215,5 +231,73 @@ class TicketUtilsLib
 
         $ticket->db->commit();
         return 1;
+    }
+
+    /**
+     * @param   Ticket  $ticket
+     */
+    public static function notify_awaiting_validation($ticket)
+    {
+        global $user;
+
+        $to = $ticket->origin_email;
+
+        if (!$to)
+        {
+            return;
+        }
+
+        $body = 'Esperando validación';
+
+        $subject = 'Validación ticket';
+
+        $trackid = 'ticket_' . $ticket->id;
+
+        $mail = new CMailFile(
+            $subject,
+            $to,
+            $user->email,
+            $body,
+            [],
+            [],
+            [],
+            '',
+            '',
+            0,
+            1,
+            '',
+            '',
+            $trackid
+        );
+
+        $result = $mail->sendfile();
+
+        if (!$result)
+        {
+            setEventMessages($mail->error, $mail->errors, 'warnings');
+        }
+
+        return $result;
+    }
+
+    public static function rating()
+    {
+        $w = '';
+
+        $w .= '<div class="rating-container">';
+
+        for ($i = 1; $i <= 5; $i++)
+        {
+            $w .= '<span class="rating-item" data-value="' . $i . '" data-active="0">';
+            $w .= '</span>';
+        }
+
+        $w .= '</div>';
+
+        $w .= '<input type="hidden" name="rating" id="rating" value="0">';
+
+        $w .= '<script src="' . DOL_URL_ROOT . '/custom/ticketutils/js/rating.js"></script>';
+
+        return $w;
     }
 }

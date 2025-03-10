@@ -1,0 +1,27 @@
+.butAction {
+    &.accept {
+        background-color: green;
+    }
+
+    &.reject {
+        background-color: darkred;
+    }
+}
+
+.rating-container {
+    display: flex;
+    align-items: center;
+
+    gap: 6px;
+}
+
+.rating-item {
+    width: 20px;
+    height: 20px;
+
+    background-color: lightgray;
+
+    &.active {
+        background-color: yellow;
+    }
+}

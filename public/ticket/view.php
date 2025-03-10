@@ -59,12 +59,18 @@ require_once DOL_DOCUMENT_ROOT . '/core/lib/security.lib.php';
 require_once DOL_DOCUMENT_ROOT . '/core/lib/company.lib.php';
 require_once DOL_DOCUMENT_ROOT . '/core/lib/payments.lib.php';
 
+require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/lib/ticketutils.lib.php';
+
+require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib.class.php';
+
 /* print_r($_POST);
 
 exit(); */
 
 // Load translation files required by the page
-$langs->loadLangs(array("companies", "other", "ticket"));
+$langs->loadLangs(array("companies", "other", "ticket", "ticketutils@ticketutils"));
+
+SociLib::load_components([SOCILIB_MODAL]);
 
 // Get parameters
 $action   = GETPOST('action', 'aZ09');
@@ -273,7 +279,10 @@ if (!$conf->global->TICKET_ENABLE_PUBLIC_INTERFACE)
 }
 
 $arrayofjs = array();
-$arrayofcss = array('/ticket/css/styles.css.php');
+$arrayofcss = array(
+	'/ticket/css/styles.css.php',
+	'/custom/ticketutils/css/ticketutils.css'
+);
 
 llxHeaderTicket($langs->trans("Tickets"), "", 0, 0, $arrayofjs, $arrayofcss);
 
@@ -442,15 +451,61 @@ if ($action == "view_ticket" || $action == "presend" || $action == "close" || $a
 			// List ticket
 			print '<div class="inline-block divButAction"><a class="left" style="padding-right: 50px" href="javascript:$(\'#form_view_ticket_list\').submit();">' . $langs->trans('ViewMyTicketList') . '</a></div>';
 
-			if ($object->dao->fk_statut < Ticket::STATUS_CLOSED)
+			$ticket = $object->dao;
+
+			if ($ticket->status < Ticket::STATUS_CLOSED)
 			{
+				$accept_modal = '';
+
+				$accept_modal .= '<div>';
+
+				$accept_modal .= '<span>';
+				$accept_modal .= $langs->trans('AcceptModalDescription');
+				$accept_modal .= '</span>';
+
+				$accept_modal .= TicketUtilsLib::rating();
+
+				$accept_modal .= '</div>';
+
+				echo SociModal::print(
+					'modal_accept',
+					'',
+					'',
+					$langs->trans('AcceptSolution'),
+					$accept_modal
+				);
+
 				// New message
-				print '<div class="inline-block divButAction"><a  class="butAction" href="' . $_SERVER['PHP_SELF'] . '?action=presend&mode=init&track_id=' . $object->dao->$id_to_use . (!empty($entity) && isModEnabled('multicompany') ? '&entity=' . $entity : '') . '&token=' . newToken() . '">' . $langs->trans('TicketAddMessage') . '</a></div>';
+				print '<div class="inline-block divButAction">';
+				echo '<a  class="butAction" href="' . $_SERVER['PHP_SELF'] . '?action=presend&mode=init&track_id=' . $object->dao->$id_to_use . (!empty($entity) && isModEnabled('multicompany') ? '&entity=' . $entity : '') . '&token=' . newToken() . '">';
+				echo $langs->trans('TicketAddMessage');
+				echo '</a>';
+				echo '</div>';
 
 				// Close ticket
-				if ($object->dao->fk_statut >= Ticket::STATUS_NOT_READ && $object->dao->fk_statut < Ticket::STATUS_CLOSED)
+				if ($conf->global->TICKETUTILS_VALIDATION_STATUS)
 				{
-					print '<div class="inline-block divButAction"><a  class="butAction" href="' . $_SERVER['PHP_SELF'] . '?action=close&track_id=' . $object->dao->$id_to_use . (!empty($entity) && isModEnabled('multicompany') ? '&entity=' . $entity : '') . '&token=' . newToken() . '">' . $langs->trans('CloseTicket') . '</a></div>';
+					if ($ticket->status == Ticket::STATUS_NEED_MORE_INFO)
+					{
+						echo '<div class="inline-block divButAction toggle-modal" data-modal-id="modal_accept">';
+						echo '<a class="butAction accept">';
+						echo $langs->trans('AcceptSolution');
+						echo '</a>';
+						echo '</div>';
+
+						echo '<div class="inline-block divButAction">';
+						echo '<a class="butAction reject">';
+						echo $langs->trans('RejectSolution');
+						echo '</a>';
+						echo '</div>';
+					}
+				}
+				else
+				{
+					if ($ticket->status >= Ticket::STATUS_NOT_READ && $ticket->status < Ticket::STATUS_CLOSED)
+					{
+						print '<div class="inline-block divButAction"><a  class="butAction" href="' . $_SERVER['PHP_SELF'] . '?action=close&track_id=' . $object->dao->$id_to_use . (!empty($entity) && isModEnabled('multicompany') ? '&entity=' . $entity : '') . '&token=' . newToken() . '">' . $langs->trans('CloseTicket') . '</a></div>';
+					}
 				}
 			}
 
