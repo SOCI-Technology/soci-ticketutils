@@ -139,6 +139,8 @@ class ActionsTicketUtils
             {
                 TicketUtilsTicketListHooks::hide_public_track_id();
             }
+
+            TicketUtilsTicketListHooks::add_arrayfields();
         }
 
         if (in_array('publicnewticketcard', $param_context))
@@ -169,7 +171,7 @@ class ActionsTicketUtils
         if (in_array('ticketcard', $param_context))
         {
             echo '<link rel="stylesheet" href="' . DOL_URL_ROOT . '/custom/ticketutils/css/ticketutils.css">';
-            
+
             $print = TicketUtilsTicketCardHooks::add_rating_info($object);
 
             $this->resprints = $print;
@@ -231,6 +233,68 @@ class ActionsTicketUtils
             {
                 TicketUtilsTicketCardHooks::hide_public_track_id();
             }
+        }
+    }
+
+    function printFieldListSelect($parameters, &$object, &$action, $hookmanager)
+    {
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('ticketlist', $param_context))
+        {
+            $res = TicketUtilsTicketListHooks::add_list_select();
+
+            $this->resprints = $res;
+        }
+    }
+
+    function printFieldListFrom($parameters, &$object, &$action, $hookmanager)
+    {
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('ticketlist', $param_context))
+        {
+            $res = TicketUtilsTicketListHooks::add_list_from();
+
+            $this->resprints = $res;
+        }
+    }
+
+    function printFieldListOption($parameters, &$object, &$action, $hookmanager)
+    {
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('ticketlist', $param_context))
+        {
+            $res = TicketUtilsTicketListHooks::add_list_option();
+
+            $this->resprints = $res;
+        }
+    }
+
+    function printFieldListTitle($parameters, &$object, &$action, $hookmanager)
+    {
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('ticketlist', $param_context))
+        {
+            $res = TicketUtilsTicketListHooks::add_list_title();
+
+            $this->resprints = $res;
+        }
+    }
+
+    function printFieldListValue($parameters, &$object, &$action, $hookmanager)
+    {
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('ticketlist', $param_context))
+        {
+            $obj = $parameters['obj'];
+
+            $res = TicketUtilsTicketListHooks::add_list_value($object, $obj);
+
+            $this->resprints = $res;
         }
     }
 }
