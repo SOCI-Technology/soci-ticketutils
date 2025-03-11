@@ -30,7 +30,7 @@ class TicketUtilsLib
      * @param Ticket $ticket
      * @param string $new_status
      */
-    public static function change_ticket_status($ticket, $new_status, $user, $message = null)
+    public static function change_ticket_status($ticket, $new_status, $user, $message = null, $label = null)
     {
         global $db, $langs, $conf;
 
@@ -61,7 +61,7 @@ class TicketUtilsLib
             return -1;
         }
 
-        $label = $langs->trans('TicketStatusChangedTo', $ticket->ref, $langs->transnoentitiesnoconv($ticket->statuts[$new_status]));
+        $label = $label ?: $langs->trans('TicketStatusChangedTo', $ticket->ref, $langs->transnoentitiesnoconv($ticket->statuts[$new_status]));
         $message = $message ?: $label;
 
         $res = self::create_ticket_event($ticket, $message, $label, $user);
@@ -238,43 +238,63 @@ class TicketUtilsLib
      */
     public static function notify_awaiting_validation($ticket)
     {
-        global $user;
+        global $db, $user, $conf, $mysoc, $langs;
 
-        $to = $ticket->origin_email;
-
-        if (!$to)
+        $id_to_use = $conf->global->TICKETUTILS_ONLY_ONE_ID ? 'ref' : 'track_id';
+        
+        try
         {
-            return;
+            $assigned_user = new User($db);
+            $assigned_user->fetch($ticket->fk_user_assign);
+
+            $to = $ticket->origin_email;
+            $from = $conf->global->TICKET_NOTIFICATION_EMAIL_FROM;
+
+            if (!$to || !$from)
+            {
+                throw new Exception('No email defined');
+            }
+
+            $subject = '[' . $mysoc->getFullName($langs) . '] - ' .  $langs->transnoentitiesnoconv('AwaitingValidationSubject', $ticket->ref);
+
+            $msg = '';
+
+            $msg .= $langs->trans('AwaitingValidationMessage');
+
+            $msg .= '<br>';
+            $msg .= '<br>';
+
+            $msg .= $langs->trans('LinkToTicket') . ': ' . DOL_MAIN_URL_ROOT . '/public/ticket/view.php?track_id=' . $ticket->$id_to_use . '&email=' . $ticket->origin_email;
+
+            $trackid = 'ticket_' . $ticket->id;
+
+            $mail = new CMailFile(
+                $subject,
+                $to,
+                $user->email,
+                $msg,
+                [],
+                [],
+                [],
+                '',
+                '',
+                0,
+                1,
+                '',
+                '',
+                $trackid
+            );
+
+            $result = $mail->sendfile();
         }
-
-        $body = 'Esperando validación';
-
-        $subject = 'Validación ticket';
-
-        $trackid = 'ticket_' . $ticket->id;
-
-        $mail = new CMailFile(
-            $subject,
-            $to,
-            $user->email,
-            $body,
-            [],
-            [],
-            [],
-            '',
-            '',
-            0,
-            1,
-            '',
-            '',
-            $trackid
-        );
-
-        $result = $mail->sendfile();
+        catch (Exception $e)
+        {
+            dol_syslog('TICKETUTILS: ERROR SENDING EMAIL: ' . $e->getMessage());
+        }
 
         if (!$result)
         {
-            setEventMessages($mail->error, $mail->errors, 'warnings');
+            setEventMessage($mail->error, 'warnings');
         }
 
         return $result;
@@ -286,11 +306,18 @@ class TicketUtilsLib
 
         $w .= '<div class="rating-container">';
 
+        $w .= '<span>';
+        $w .= '1';
+        $w .= '</span>';
+
         for ($i = 1; $i <= 5; $i++)
         {
-            $w .= '<span class="rating-item" data-value="' . $i . '" data-active="0">';
-            $w .= '</span>';
+            $w .= '<i class="fas fa-star rating-item" data-value="' . $i . '"></i>';
         }
+
+        $w .= '<span>';
+        $w .= '5';
+        $w .= '</span>';
 
         $w .= '</div>';
 
@@ -299,5 +326,79 @@ class TicketUtilsLib
         $w .= '<script src="' . DOL_URL_ROOT . '/custom/ticketutils/js/rating.js"></script>';
 
         return $w;
+    }
+
+    /**
+     * @param   Ticket  $ticket
+     * @param   User    $user
+     * @param   string  $message
+     */
+    public static function reject_ticket($ticket, $user, $message)
+    {
+        global $db, $langs, $conf, $mysoc;
+
+        $langs->load('ticketutils@ticketutils');
+
+        $label = $langs->trans('TicketRefRejected', $ticket->ref);
+
+        $res = TicketUtilsLib::change_ticket_status($ticket, Ticket::STATUS_IN_PROGRESS, $user, $message, $label);
+
+        if (!($res > 0))
+        {
+            dol_syslog('TICKETUTILS: ERROR REJECTING TICKET', LOG_ERR);
+            return -1;
+        }
+
+        try
+        {
+            $assigned_user = new User($db);
+            $assigned_user->fetch($ticket->fk_user_assign);
+
+            $to = $assigned_user->email;
+            $from = $conf->global->TICKET_NOTIFICATION_EMAIL_FROM;
+
+            if (!$to || !$from)
+            {
+                throw new Exception('No email defined');
+            }
+
+            $subject = '[' . $mysoc->getFullName($langs) . '] - ' .  $langs->transnoentitiesnoconv('TicketRejectionSubject', $ticket->ref);
+
+            $msg = '';
+
+            $msg = $langs->transnoentitiesnoconv('TicketRejectionMessage');
+
+            $msg .= '<br>';
+            $msg .= '<br>';
+
+            $msg .= '<b>' . $langs->transnoentitiesnoconv('Comments') . ':</b> ' . $message;
+
+            $msg .= '<br>';
+            $msg .= '<br>';
+
+            $msg .= $langs->transnoentitiesnoconv('LinkToTicket') . ': ' . DOL_MAIN_URL_ROOT . '/ticket/card.php?id=' . $ticket->id;
+
+            $mail = new CMailFile(
+                $subject,
+                $to,
+                $from,
+                $msg,
+                [],
+                [],
+                [],
+                '',
+                '',
+                0,
+                1
+            );
+
+            $mail->sendfile();
+        }
+        catch (Exception $e)
+        {
+            dol_syslog('TICKETUTILS: ERROR SENDING EMAIL: ' . $e->getMessage(), LOG_ERR);
+        }
+
+        return 1;
     }
 }

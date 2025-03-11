@@ -1,5 +1,8 @@
 <?php
 
+require_once DOL_DOCUMENT_ROOT . '/ticket/class/ticket.class.php';
+require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/lib/ticketutils.lib.php';
+
 class TicketExtrafields
 {
     /**	@var DoliDB Database object */
@@ -17,8 +20,8 @@ class TicketExtrafields
     /** @var Societe|null Thirdparty */
     public $thirdparty;
 
-    /** @var float Score */
-    public $score;
+    /** @var float rating */
+    public $rating;
 
     /** @var string Rating date */
     public $rating_date;
@@ -69,7 +72,7 @@ class TicketExtrafields
     const FIELDS = array(
         'rowid',
         'fk_ticket',
-        'score',
+        'rating',
         'rating_date',
         'rating_comment',
         'fk_user_creator',
@@ -100,12 +103,12 @@ class TicketExtrafields
      * 
      *	@return		int		<0 if KO, >0 if OK
      */
-    public function fetch($id)
+    public function fetch($id = 0, $fk_ticket = 0)
     {
         $sql = "SELECT ";
         $sql .= join(', ', self::FIELDS);
         $sql .= " FROM " . MAIN_DB_PREFIX . self::TABLE_NAME . "";
-        $sql .= " WHERE rowid = '" . $id . "'";
+        $sql .= " WHERE rowid = '" . $id . "' OR fk_ticket = '" . $fk_ticket . "'";
 
         $resql = $this->db->query($sql);
 
@@ -182,7 +185,7 @@ class TicketExtrafields
             }
 
             $value = $this->$field;
-            $sql .= isset($value) ? "'" . $value . "'" : "NULL";
+            $sql .= isset($value) ? "'" . $this->db->escape($value) . "'" : "NULL";
         }
 
         $sql .= ")";
@@ -433,5 +436,115 @@ class TicketExtrafields
             }
         }
         return $result;
+    }
+
+
+    /**
+     * @param   Ticket  $ticket
+     */
+    public function rate_ticket($ticket, $rating, $rating_comment = null)
+    {
+        global $db, $langs, $conf, $mysoc;
+
+        $langs->load('ticketutils@ticketutils');
+
+        $this->fetch(0, $ticket->id);
+
+        $this->fk_ticket = $ticket->id;
+        $this->rating = $rating;
+        $this->rating_comment = $rating_comment;
+        $this->rating_date = date('Y-m-d H:i:s', dol_now());
+
+        $this->db->begin();
+
+        $prov_user = new User($this->db);
+        $prov_user->id = 0;
+
+        if ($this->id > 0)
+        {
+            $res = $this->update($prov_user);
+        }
+        else
+        {
+            $res = $this->create($prov_user);
+        }
+
+        if (!($res > 0))
+        {
+            dol_syslog('TICKETUTILS: ERROR RATING TICKET', LOG_ERR);
+            $this->db->rollback();
+            return -1;
+        }
+
+        $label = $langs->trans('TicketRefAccepted', $ticket->ref);
+
+        $res = TicketUtilsLib::change_ticket_status($ticket, Ticket::STATUS_CLOSED, $prov_user, $rating_comment, $label);
+
+        try
+        {
+            $assigned_user = new User($db);
+            $assigned_user->fetch($ticket->fk_user_assign);
+
+            $to = $assigned_user->email;
+            $from = $conf->global->TICKET_NOTIFICATION_EMAIL_FROM;
+
+            if (!$to || !$from)
+            {
+                throw new Exception('No email defined');
+            }
+
+            $subject = '[' . $mysoc->getFullName($langs) . '] - ' .  $langs->transnoentitiesnoconv('TicketAcceptedSubject', $ticket->ref);
+
+            $message = '';
+
+            $message .= $langs->transnoentitiesnoconv('TicketAcceptedMessage');
+
+            $message .= '<br>';
+            $message .= '<br>';
+
+            $message .= '<b>' . $langs->transnoentitiesnoconv('Rating') . ':</b> ' . $rating . '/5';
+            
+            if ($rating_comment)
+            {
+                $message .= '<br>';
+                $message .= '<b>' . $langs->transnoentitiesnoconv('Comments') . ':</b> ' . $rating_comment;
+            }
+
+            $message .= '<br>';
+            $message .= '<br>';
+            
+            $message .= $langs->transnoentitiesnoconv('LinkToTicket') . ': ' . DOL_MAIN_URL_ROOT . '/ticket/card.php?id=' . $ticket->id;
+
+            $mail = new CMailFile(
+                $subject,
+                $to,
+                $from,
+                $message,
+                [],
+                [],
+                [],
+                '',
+                '',
+                0,
+                1
+            );
+
+            $mail->sendfile();
+        }
+        catch (Exception $e)
+        {
+            dol_syslog('TICKETUTILS: ERROR SENDING EMAIL: ' . $e->getMessage());
+        }
+
+        if (!($res > 0))
+        {
+            dol_syslog('TICKETUTILS: ERROR CHANGING TICKET STATUS TICKET', LOG_ERR);
+            $this->db->rollback();
+            return -1;
+        }
+
+        $this->db->commit();
+
+        return 1;
     }
 }

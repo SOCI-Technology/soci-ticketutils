@@ -2,6 +2,8 @@
 
 require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib.class.php';
 
+require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/class/ticket_extrafields.class.php';
+
 class TicketUtilsTicketCardHooks
 {
     /**
@@ -140,5 +142,97 @@ class TicketUtilsTicketCardHooks
         $action = 'view';
 
         return 1;
+    }
+
+    /**
+     * @param   Ticket  $object
+     */
+    public static function replace_reopen_ticket($object)
+    {
+        global $user;
+
+        $object->fetch(GETPOST('id', 'int'), '', GETPOST('track_id', 'alpha'));
+
+        if (!($object->id > 0))
+        {
+            return;
+        }
+
+        // prevent browser refresh from reopening ticket several times
+        if (!($object->status == Ticket::STATUS_CLOSED || $object->status == Ticket::STATUS_CANCELED))
+        {
+            return;
+        }
+
+        $res = TicketUtilsLib::change_ticket_status($object, Ticket::STATUS_IN_PROGRESS, $user);
+
+        if ($res)
+        {
+            $url = DOL_URL_ROOT . '/ticket/card.php?track_id=' . $object->track_id;
+
+            header("Location: " . $url);
+            exit();
+        }
+        else
+        {
+            setEventMessages($object->error, $object->errors, 'errors');
+        }
+
+        return 1;
+    }
+
+    /**
+     * @param   Ticket  $ticket
+     */
+    public static function add_rating_info($ticket)
+    {
+        if ($ticket->status != Ticket::STATUS_CLOSED)
+        {
+            return;
+        }
+
+        global $db, $langs;
+
+        $langs->load('ticketutils@ticketutils');
+
+        $ticket_extrafields = new TicketExtrafields($db);
+        $ticket_extrafields->fetch(0, $ticket->id);
+
+        $rating = $ticket_extrafields->rating;
+        
+        $w = '';
+
+        $w .= '<tr>';
+        $w .= '<td>';
+        $w .= $langs->trans('Rating');
+        $w .= '</td>';
+
+        $w .= '<td>';
+        $w .= '<div class="rating-container">';
+        for ($i = 1; $i <= 5; $i++)
+        {
+            $active = $i <= $rating ? 'active' : '';
+
+            $w .= '<i class="fas fa-star rating-item ' . $active . ' static">';
+            $w .= '</i>';
+        }
+        $w .= '</div>';
+        $w .= '</td>';
+
+        $w .= '</tr>';
+
+        $w .= '<tr>';
+
+        $w .= '<td>';
+        $w .= $langs->trans('Comments');
+        $w .= '</td>';
+
+        $w .= '<td>';
+        $w .= $ticket_extrafields->rating_comment;
+        $w .= '</td>';
+        
+        $w .= '</tr>';
+
+        return $w;
     }
 }

@@ -8,6 +8,28 @@
     }
 }
 
+.accept-ticket-modal,
+.reject-ticket-modal {
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 12px;
+}
+
+.accept-ticket-modal>span:first-child,
+.reject-ticket-modal>span:first-child {
+    max-width: 300px;
+    text-align: center;
+}
+
+.accept-ticket-modal textarea,
+.reject-ticket-modal textarea {
+    width: 200px;
+    height: 100px;
+}
+
 .rating-container {
     display: flex;
     align-items: center;
@@ -16,12 +38,17 @@
 }
 
 .rating-item {
-    width: 20px;
-    height: 20px;
+    font-size: 24pt;
 
-    background-color: lightgray;
+    color: lightgray;
 
-    &.active {
-        background-color: yellow;
-    }
+    border-radius: 100%;
+}
+
+.rating-item:not(.static):hover {
+    cursor: pointer;
+}
+
+.rating-item.active {
+    color: gold !important;
 }

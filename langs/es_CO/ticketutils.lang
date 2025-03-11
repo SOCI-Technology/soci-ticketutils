@@ -37,8 +37,35 @@ Characters = Caracteres
 
 TicketUnassigned = El ticket ya no está asignado
 
+Rating = Calificación
+
 AcceptSolution = Aceptar solución
 RejectSolution = Rechazar solución
+
+AcceptTicketDescription = Califique de 1 a 5 el resultado de la solución entregada, puede añadir un comentario adicional si desea
+RejectTicketDescription = Describa la razón por la cual rechaza la solución
+
+TicketRefAccepted = Solución al ticket %s aceptada
+TicketRefRejected = Solución al ticket %s rechazada
+
+TicketAcceptedSubject = Solución de ticket aceptada - Ref %s
+TicketRejectionSubject = Solución de ticket rechazada - Ref %s
+
+TicketAcceptedMessage = La solución al ticket ha sido aceptada por el solicitante
+TicketRejectionMessage = La solución al ticket ha sido rechazada por el solicitante
+
+LinkToTicket = Enlace al ticket
+
+ErrorRatingTicket = Error al calificar ticket
+TicketRated = Ticket calificado
+
+ErrorRejectingTicket = Error al rechazar ticket
+TicketRejected = Solución al ticket rechazada
+
+AwaitingValidationSubject = Esperando validación de ticket - Ref %s
+AwaitingValidationMessage = Se ha marcado un ticket para su validación, por favor ingrese al enlace para aceptar o rechazar la solución propuesta
+
+NoComments = Sin comentarios
 
 #
 # SETUP

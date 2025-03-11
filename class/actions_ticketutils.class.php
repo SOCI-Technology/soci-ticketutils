@@ -103,8 +103,13 @@ class ActionsTicketUtils
                 {
                     return TicketUtilsTicketCardHooks::replace_assign_user($object);
                 }
+
+                if ($action == 'confirm_reopen')
+                {
+                    return TicketUtilsTicketCardHooks::replace_reopen_ticket($object);
+                }
             }
-            
+
             if ($conf->global->TICKETUTILS_REQUIRE_CHANGE_STATUS_NOTE)
             {
                 if ($action == 'set_read' || $action == 'confirm_set_status')
@@ -125,11 +130,6 @@ class ActionsTicketUtils
 
                     return $res;
                 }
-            }
-
-            if ($conf->global->TICKETUTILS_ONLY_ONE_ID)
-            {
-                TicketUtilsTicketCardHooks::hide_public_track_id();
             }
         }
 
@@ -165,6 +165,15 @@ class ActionsTicketUtils
             TicketUtilsCreateTicketHooks::fix_show_errors($object);
             TicketUtilsCreateTicketHooks::add_message_character_count();
         }
+
+        if (in_array('ticketcard', $param_context))
+        {
+            echo '<link rel="stylesheet" href="' . DOL_URL_ROOT . '/custom/ticketutils/css/ticketutils.css">';
+            
+            $print = TicketUtilsTicketCardHooks::add_rating_info($object);
+
+            $this->resprints = $print;
+        }
     }
 
     function setContentSecurityPolicy($parameters, &$object, &$action, $hookmanager)
@@ -196,16 +205,31 @@ class ActionsTicketUtils
     function LibStatut($parameters, &$object, &$action, $hookmanager)
     {
         global $conf;
-        
+
         $param_context = explode(':', $parameters['context']);
-        
+
         if (get_class($object) == Ticket::class)
         {
             if ($conf->global->TICKETUTILS_ALTER_STATUS_LOGIC)
             {
                 $context = in_array('ticketcard', $param_context) ? 'ticketcard' : '';
-                
+
                 TicketUtilsLib::replace_ticket_status($object, $context);
+            }
+        }
+    }
+
+    function llxFooter($parameters, &$object, &$action, $hookmanager)
+    {
+        global $conf;
+
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('ticketcard', $param_context))
+        {
+            if ($conf->global->TICKETUTILS_ONLY_ONE_ID)
+            {
+                TicketUtilsTicketCardHooks::hide_public_track_id();
             }
         }
     }
