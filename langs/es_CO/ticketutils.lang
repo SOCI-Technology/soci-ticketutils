@@ -67,6 +67,10 @@ AwaitingValidationMessage = Se ha marcado un ticket para su validación, por fav
 
 NoComments = Sin comentarios
 
+AnsSetup = Configuración de ANS
+Types = Tipos
+SeverityLevels = Niveles de gravedad
+
 #
 # SETUP
 #
@@ -81,3 +85,13 @@ SetupSelectCompany = Permitir escoger una empresa específica cuando el correo c
 SetupOnlyOneId = Usar la referencia del ticket como único identificador
 SetupAlterStatusLogic = Alterar lógica general de los estados de los tickets
 SetupValidationStatusClosingTimeHours = Tiempo de espera antes de cerrar el ticket cuando se encuentra esperando validación (horas)
+SetupUsersToAlertWhenDelay = Usuarios que alertar cuando haya retraso en los tickets (Además del usuario asignado)
+
+SettingSaved = Configuración guardada
+ErrorSavingSetting = Error al guardar configuración
+
+#
+# PERMISSIONS
+#
+
+PermAns = Modificar configuración de ANS

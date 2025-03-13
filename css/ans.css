@@ -1,0 +1,13 @@
+.user-to-alert-list {
+    display: flex;
+    flex-direction: column;
+
+    gap: 6px;
+}
+
+.user-to-alert-item {
+    display: flex;
+    align-items: center;
+
+    gap: 6px;
+}

@@ -26,6 +26,40 @@ class TicketUtilsLib
         return $head;
     }
 
+    public static function ans_prepare_head()
+    {
+        global $langs;
+
+        $h = 0;
+        $head = array();
+
+        $head[$h][0] = DOL_URL_ROOT . "/custom/ticketutils/ans.php";
+        $head[$h][1] = $langs->trans('General');
+        $head[$h][2] = 'general';
+
+        $h++;
+
+        $head[$h][0] = DOL_URL_ROOT . "/custom/ticketutils/ans_dicts.php?dict=types";
+        $head[$h][1] = $langs->trans('Types');
+        $head[$h][2] = 'types';
+
+        $h++;
+
+        $head[$h][0] = DOL_URL_ROOT . "/custom/ticketutils/ans_dicts.php?dict=groups";
+        $head[$h][1] = $langs->trans('Groups');
+        $head[$h][2] = 'groups';
+
+        $h++;
+
+        $head[$h][0] = DOL_URL_ROOT . "/custom/ticketutils/ans_dicts.php?dict=severity";
+        $head[$h][1] = $langs->trans('SeverityLevels');
+        $head[$h][2] = 'severity';
+
+        $h++;
+
+        return $head;
+    }
+
     /**
      * @param Ticket $ticket
      * @param string $new_status
@@ -241,7 +275,7 @@ class TicketUtilsLib
         global $db, $user, $conf, $mysoc, $langs;
 
         $id_to_use = $conf->global->TICKETUTILS_ONLY_ONE_ID ? 'ref' : 'track_id';
-        
+
         try
         {
             $assigned_user = new User($db);
@@ -400,5 +434,54 @@ class TicketUtilsLib
         }
 
         return 1;
+    }
+
+    public static function get_inactive_tickets()
+    {
+        global $db;
+
+        $ticket_example = new Ticket($db);
+
+        $sql = "SELECT ";
+        foreach ($ticket_example->fields as $field => $field_info)
+        {
+            if ($field == 'rowid')
+            {
+                $sql .= "t.rowid";
+                continue;
+            }
+
+            $sql .= ", t." . $field;
+        }
+
+        $sql .= " FROM " . MAIN_DB_PREFIX . "ticket as t";
+        $sql .= " WHERE t.fk_statut NOT IN (" . join(',', [Ticket::STATUS_CANCELED, Ticket::STATUS_CLOSED, Ticket::STATUS_NEED_MORE_INFO]) . ")";
+
+        $resql = $db->query($sql);
+
+        if (!$resql)
+        {
+            return;
+        }
+
+        for ($i = 0; $i < $db->num_rows($resql); $i++)
+        {
+            $obj = $db->fetch_object($resql);
+
+            $ticket = new Ticket($db);
+
+            foreach ($ticket->fields as $field => $field_info)
+            {
+                if ($field == 'rowid')
+                {
+                    $ticket->id = $obj->rowid;
+                    continue;
+                }
+
+                $ticket->$field = $obj->$field;
+            }
+
+            yield $ticket;
+        }
     }
 }

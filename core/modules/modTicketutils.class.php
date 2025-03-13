@@ -104,48 +104,32 @@ class modTicketutils extends DolibarrModules
 		$this->rights = array();		// Permission array used by this module
 		$r = 0;
 
-		/* $this->rights[$r][0] = $this->numero . sprintf("%02d", $r + 1);
-		$this->rights[$r][1] = 'PermCvRead';
-		$this->rights[$r][4] = 'cv';
-		$this->rights[$r][5] = 'read';
-		$r++;*/
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", $r + 1);
+		$this->rights[$r][1] = 'PermAns';
+		$this->rights[$r][4] = 'ans';
+		$this->rights[$r][5] = 'write';
+		$r++;
 
 
 		// Main menu entries
 		$this->menus = array();			// List of menus to add
 		$r = 0;
 
-		/* $this->menu[$r++] = array(
-			'fk_menu' => '',
-			'type' => 'top',
-			'titre' => 'Warranties',
+		$this->menu[$r++] = array(
+			'fk_menu' => 'fk_mainmenu=ticket,fk_leftmenu=ticket',
+			'type' => 'left',
+			'titre' => 'MenuANS',
 			'prefix' => '',
-			'mainmenu' => 'ticketutils',
-			'leftmenu' => '',
-			'url' => '/custom/ticketutils/index.php',
+			'mainmenu' => 'ticket',
+			'leftmenu' => 'ans',
+			'url' => '/custom/ticketutils/ans.php',
 			'langs' => 'ticketutils@ticketutils',
-			'position' => 1000 + $r,
-			'enabled' => '$conf->ticketutils->enabled',
-			'perms' => '$user->rights->ticketutils->cv->read',
+			'position' => 1100 + $r,
+			'enabled' => '$user->rights->ticketutils->ans->write',
+			'perms' => '$user->rights->ticketutils->ans->write',
 			'target' => '',
 			'user' => 2,
 		);
-
-		$this->menu[$r++] = array(
-			'fk_menu' => 'fk_mainmenu=ticketutils',
-			'type' => 'left',
-			'titre' => 'CVs',
-			'prefix' => '<span class="fas fa-file-medical paddingright pictofixedwith" style="color: var(--cv-color)"></span>',
-			'mainmenu' => 'ticketutils',
-			'leftmenu' => 'cvs',
-			'url' => '/custom/ticketutils/cv/index.php',
-			'langs' => 'ticketutils@ticketutils',
-			'position' => 1100 + $r,
-			'enabled' => '1',
-			'perms' => '',
-			'target' => '',
-			'user' => 2,
-		); */
 	}
 	/**
 	 * Function to initialize module permissions
