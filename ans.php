@@ -30,6 +30,10 @@ $form_action = DOL_URL_ROOT . '/custom/ticketutils/inc/ans.inc.php';
 
 $form = new Form($db);
 
+/**
+ * GENERAL TABLE
+ */
+#region GENERAL TABLE
 echo '<table class="noborder centpercent">';
 
 /**
@@ -221,27 +225,6 @@ if ($conf->global->TICKETUTILS_SEND_EMAIL_NOTIFICATIONS_WHEN_DELAY)
  */
 
 /**
- * Validation status
- */
-if ($conf->global->TICKETUTILS_VALIDATION_STATUS)
-{
-    echo '<tr>';
-
-    echo '<td>';
-    echo $langs->trans('SetupValidationStatusClosingTimeHours');
-    echo '</td>';
-
-    echo '<td>';
-    echo SociConstField::print('TICKETUTILS_VALIDATION_STATUS_CLOSING_TIME_HOURS', 'number', $form_action);
-    echo '</td>';
-
-    echo '</tr>';
-}
-/**
- * End validation status
- */
-
-/**
  * Text of email after creating ticket
  */
 $mail_mesg_new = getDolGlobalString("TICKET_MESSAGE_MAIL_NEW", $langs->trans('TicketNewEmailBody'));
@@ -254,7 +237,7 @@ echo '</td>';
 
 echo '<td>';
 require_once DOL_DOCUMENT_ROOT . '/core/class/doleditor.class.php';
-$doleditor = new DolEditor('const_value', $mail_mesg_new, '100%', 120, 'dolibarr_mailings', '', false, true, getDolGlobalInt('FCKEDITOR_ENABLE_MAIL'), ROWS_2, 70);
+$doleditor = new DolEditor('TICKET_MESSAGE_MAIL_NEW', $mail_mesg_new, '100%', 120, 'dolibarr_mailings', '', false, true, getDolGlobalInt('FCKEDITOR_ENABLE_MAIL'), ROWS_2, 70);
 
 echo '<form 
 method="POST"
@@ -278,6 +261,112 @@ echo '</tr>';
  */
 
 echo '</tbody>';
+/**
+ * End body
+ */
+
+echo '</table>';
+#endregion table
+/**
+ * END GENERAL TABLE
+ */
+
+echo load_fiche_titre($langs->trans('Validation'), '', null);
+
+echo '<table class="table noborder centpercent">';
+
+/**
+ * Header
+ */
+echo '<thead>';
+echo '<tr class="liste_titre">';
+
+echo '<th>';
+echo $langs->trans('Setting');
+echo '</th>';
+
+echo '<th>';
+echo '</th>';
+
+echo '</tr>';
+echo '</thead>';
+/**
+ * End header
+ */
+
+/**
+ * Body
+ */
+
+/**
+ * VALIDATION STATUS
+ */
+echo '<tr>';
+
+echo '<td>';
+echo $langs->trans('SetupValidationStatus');
+echo '</td>';
+
+echo '<td>';
+echo SociConstField::print('TICKETUTILS_VALIDATION_STATUS', 'boolean', $form_action);
+echo '</td>';
+
+echo '</tr>';
+/**
+ * END VALIDATION STATUS
+ */
+
+if ($conf->global->TICKETUTILS_VALIDATION_STATUS)
+{
+    echo '<tr>';
+
+    echo '<td>';
+    echo $langs->trans('SetupValidationStatusClosingTimeHours');
+    echo '</td>';
+
+    echo '<td>';
+    echo SociConstField::print('TICKETUTILS_VALIDATION_STATUS_CLOSING_TIME_HOURS', 'number', $form_action);
+    echo '</td>';
+
+    echo '</tr>';
+}
+
+/**
+ * Text of email after auto closing
+ */
+$auto_closing_message = getDolGlobalString("TICKETUTILS_AUTO_CLOSING_MESSAGE", $langs->trans('DefaultAutoClosingMessage'));
+echo '<tr>';
+
+echo '<td>';
+echo $langs->trans("SetupAutoClosingMessage");
+echo '</label>';
+echo '</td>';
+
+echo '<td>';
+require_once DOL_DOCUMENT_ROOT . '/core/class/doleditor.class.php';
+$doleditor = new DolEditor('TICKETUTILS_AUTO_CLOSING_MESSAGE', $auto_closing_message, '100%', 120, 'dolibarr_mailings', '', false, true, getDolGlobalInt('FCKEDITOR_ENABLE_MAIL'), ROWS_2, 70);
+
+echo '<form 
+method="POST"
+action="' . $form_action . '"
+style="display: flex; align-items: center; gap: 6px;"
+>';
+$doleditor->Create();
+
+echo '<button class="butAction" name="update_const">';
+echo $langs->trans('Save');
+echo '</button>';
+
+echo '<input type="hidden" name="const_name" value="TICKETUTILS_AUTO_CLOSING_MESSAGE">';
+
+echo '</form>';
+
+echo '</td>';
+echo '</tr>';
+/**
+ * End text of email after creating ticket
+ */
+
 /**
  * End body
  */

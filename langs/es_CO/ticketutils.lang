@@ -24,6 +24,7 @@ TicketStatusAssigned = Asignado
 TicketStatusInProgress = En progreso
 TicketStatusWaiting = En espera
 TicketStatusWaitingValidation = Esperando validación
+TicketStatusNeedMoreInformation = Esperando comentarios
 TicketStatusClosed = Resuelto
 TicketStatusAbandoned = Abandonado
 
@@ -103,6 +104,9 @@ SetupUsersToAlertWhenDelay = Usuarios que alertar cuando haya retraso en los tic
 
 SettingSaved = Configuración guardada
 ErrorSavingSetting = Error al guardar configuración
+
+SetupAutoClosingMessage = Mensaje al cerrar tickets automáticamente
+DefaultAutoClosingMessage = Ticket cerrado automáticamente después de esperar el tiempo programado para validación de parte del solicitante
 
 #
 # PERMISSIONS

@@ -169,7 +169,7 @@ class TicketUtilsLib
      */
     public static function replace_ticket_status(&$ticket, $context = '')
     {
-        global $langs;
+        global $langs, $conf;
 
         $langs->load('ticketutils@ticketutils');
 
@@ -181,10 +181,15 @@ class TicketUtilsLib
             Ticket::STATUS_ASSIGNED => 'TicketStatusAssigned',
             Ticket::STATUS_IN_PROGRESS => 'TicketStatusInProgress',
             Ticket::STATUS_WAITING => 'TicketStatusWaiting',
-            Ticket::STATUS_NEED_MORE_INFO => 'TicketStatusWaitingValidation',
+            Ticket::STATUS_NEED_MORE_INFO => 'TicketStatusNeedMoreInformation',
             Ticket::STATUS_CLOSED => 'TicketStatusClosed',
             Ticket::STATUS_CANCELED => 'TicketStatusAbandoned'
         ];
+
+        if ($conf->global->TICKETUTILS_VALIDATION_STATUS)
+        {
+            $labels[Ticket::STATUS_NEED_MORE_INFO] = 'TicketStatusWaitingValidation';
+        }
 
         if ($context == 'ticketcard')
         {
@@ -902,7 +907,7 @@ class TicketUtilsLib
         $msg .= '</thead>';
 
         $msg .= '<tbody>';
-        
+
         foreach ($tickets as $ticket)
         {
             $msg .= '<tr>';
@@ -949,9 +954,130 @@ class TicketUtilsLib
             $msg .= '</tr>';
         }
         $msg .= '</tbody>';
-        
+
         $msg .= '</table>';
 
         return $msg;
+    }
+
+
+    public function close_tickets_awaiting_validation()
+    {
+        global $db, $langs, $conf;
+
+        $VALIDATION_STATUS_CLOSING_TIME = $conf->global->TICKETUTILS_VALIDATION_STATUS_CLOSING_TIME_HOURS * 3600;
+
+        if ($VALIDATION_STATUS_CLOSING_TIME <= 0)
+        {
+            dol_syslog('TICKETUTILS: TICKETUTILS_VALIDATION_STATUS_CLOSING_TIME_HOURS not defined', LOG_WARNING);
+            $this->output = 'TICKETUTILS_VALIDATION_STATUS_CLOSING_TIME_HOURS not defined';
+            return 0;
+        }
+
+        $ticket_example = new Ticket($db);
+
+        $sql = "SELECT ";
+        foreach ($ticket_example->fields as $field => $field_info)
+        {
+            if ($field == 'rowid')
+            {
+                $sql .= "t.rowid";
+                continue;
+            }
+
+            $sql .= ", t." . $field;
+        }
+
+        $sql .= " FROM " . MAIN_DB_PREFIX . "ticket as t";
+        $sql .= " WHERE t.fk_statut IN (" . Ticket::STATUS_NEED_MORE_INFO . ")";
+
+        $resql = $db->query($sql);
+
+        if (!$resql)
+        {
+            return;
+        }
+
+        for ($i = 0; $i < $db->num_rows($resql); $i++)
+        {
+            $obj = $db->fetch_object($resql);
+
+            $ticket = new Ticket($db);
+
+            foreach ($ticket->fields as $field => $field_info)
+            {
+                if ($field == 'rowid')
+                {
+                    $ticket->id = $obj->rowid;
+                    continue;
+                }
+
+                $ticket->$field = $obj->$field;
+            }
+
+            $actioncomm = new ActionComm($db);
+            /** @var ActionComm[] */
+            $linked_actions = $actioncomm->getActions(0, $ticket->id, $ticket->element);
+
+            /** @var ActionComm|null */
+            $change_to_waiting_event = null;
+
+            $label_for_waiting_event = $langs->trans('TicketStatusChangedTo', $ticket->ref, $langs->transnoentitiesnoconv('TicketStatusWaitingValidation'));
+            foreach ($linked_actions as $action)
+            {
+                if ($action->label == $label_for_waiting_event)
+                {
+                    $change_to_waiting_event = $action;
+                    break;
+                }
+            }
+
+            if (!$change_to_waiting_event)
+            {
+                dol_syslog('TICKETUTILS: NO CHANGE TO WAITING EVENT', LOG_ERR);
+                return;
+            }
+
+            $change_to_waiting_event_time = $change_to_waiting_event->datec;
+
+            if (time() - $change_to_waiting_event_time > $VALIDATION_STATUS_CLOSING_TIME)
+            {
+                $res = self::auto_close_ticket($ticket);
+            }
+        }
+    }
+
+    /**
+     * @param Ticket $ticket
+     */
+    public static function auto_close_ticket($ticket)
+    {
+        global $langs, $mysoc, $conf;
+
+        $message = $langs->trans('TicketClosedAutomatically', $ticket->ref);
+
+        $res = self::change_ticket_status($ticket, Ticket::STATUS_CLOSED, 0, $message);
+
+        if (!($res > 0))
+        {
+            return -1;
+        }
+
+        $to = $ticket->origin_email;
+        $from = $conf->global->TICKET_NOTIFICATION_EMAIL_FROM;
+
+        if (!$to || !$from)
+        {
+            dol_syslog('TICKETUTILS: NO TO OR FROM EMAIL', LOG_WARNING);
+            return 1;
+        }
+
+        $subject = '[' . $mysoc->getFullName($langs) . '] - ' . $langs->trans('TicketClosedAutomatically', $ticket->ref);
+
+        $msg = '';
+
+        $msg .= getDolGlobalString("TICKETUTILS_AUTO_CLOSING_MESSAGE", $langs->trans('DefaultAutoClosingMessage'));
+
+        $msg .= '<br>';
     }
 }

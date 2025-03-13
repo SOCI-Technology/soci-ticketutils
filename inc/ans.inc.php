@@ -11,8 +11,8 @@ require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';
 
 if (isset($_POST['update_const']))
 {
-    $const_value = GETPOST('const_value', 'restricthtml');
     $const_name = GETPOST('const_name');
+    $const_value = GETPOST('const_value', 'restricthtml') ?: GETPOST($const_name, 'restricthtml');
 
     $res = dolibarr_set_const($db, $const_name, $const_value);
 
