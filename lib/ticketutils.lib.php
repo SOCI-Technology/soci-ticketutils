@@ -3,8 +3,12 @@
 require_once DOL_DOCUMENT_ROOT . '/ticket/class/ticket.class.php';
 require_once DOL_DOCUMENT_ROOT . '/comm/action/class/actioncomm.class.php';
 
+require_once DOL_DOCUMENT_ROOT . '/custom/observaciones/class/observacion.class.php';
+
 class TicketUtilsLib
 {
+    public $output;
+
     /**
      * Prepare the tabs for the setup page of the module
      * 
@@ -78,7 +82,10 @@ class TicketUtilsLib
         $sql = "UPDATE " . MAIN_DB_PREFIX . "ticket";
         $sql .= " SET fk_statut = '" . $new_status . "'";
 
-        if ($ticket->status == Ticket::STATUS_NOT_READ && $new_status != Ticket::STATUS_NOT_READ)
+        $is_setting_read = $ticket->status == Ticket::STATUS_NOT_READ && $new_status != Ticket::STATUS_NOT_READ;
+        $is_not_read_and_setting_read = empty($ticket->date_read) && $new_status != Ticket::STATUS_NOT_READ;
+
+        if ($is_setting_read || $is_not_read_and_setting_read)
         {
             $sql .= ", date_read = '" . $now . "'";
         }
@@ -230,6 +237,12 @@ class TicketUtilsLib
         {
             $sql .= " SET fk_user_assign=null, fk_statut = " . Ticket::STATUS_NOT_READ;
         }
+
+        if ($ticket->status == Ticket::STATUS_NOT_READ || empty($ticket->date_read))
+        {
+            $sql .= " , date_read = '" . date('Y-m-d H:i:s', dol_now()) . "'";
+        }
+
         $sql .= " WHERE rowid = " . ((int) $ticket->id);
 
         dol_syslog(get_class($ticket) . "::assignUser sql=" . $sql);
@@ -438,9 +451,13 @@ class TicketUtilsLib
 
     public static function get_inactive_tickets()
     {
-        global $db;
+        /** @var Conf $conf */
+        global $db, $conf;
 
         $ticket_example = new Ticket($db);
+
+        $DELAY_BEFORE_FIRST_RESPONSE = $conf->global->TICKET_DELAY_BEFORE_FIRST_RESPONSE * 3600;
+        $DELAY_SINCE_LAST_RESPONSE = $conf->global->TICKET_DELAY_SINCE_LAST_RESPONSE * 3600;
 
         $sql = "SELECT ";
         foreach ($ticket_example->fields as $field => $field_info)
@@ -455,7 +472,7 @@ class TicketUtilsLib
         }
 
         $sql .= " FROM " . MAIN_DB_PREFIX . "ticket as t";
-        $sql .= " WHERE t.fk_statut NOT IN (" . join(',', [Ticket::STATUS_CANCELED, Ticket::STATUS_CLOSED, Ticket::STATUS_NEED_MORE_INFO]) . ")";
+        $sql .= " WHERE t.fk_statut NOT IN (" . join(',', [Ticket::STATUS_CANCELED, Ticket::STATUS_CLOSED, Ticket::STATUS_NEED_MORE_INFO, Ticket::STATUS_WAITING]) . ")";
 
         $resql = $db->query($sql);
 
@@ -463,6 +480,8 @@ class TicketUtilsLib
         {
             return;
         }
+
+        $inactive_tickets = [];
 
         for ($i = 0; $i < $db->num_rows($resql); $i++)
         {
@@ -481,7 +500,458 @@ class TicketUtilsLib
                 $ticket->$field = $obj->$field;
             }
 
-            yield $ticket;
+            $actioncomm = new ActionComm($db);
+            /** @var ActionComm[] */
+            $linked_actions = $actioncomm->getActions(0, $ticket->id, $ticket->element);
+
+            /** @var ActionComm|null */
+            $last_message = null;
+
+            foreach ($linked_actions as $action)
+            {
+                $last_message_id = $last_message->id ?? 0;
+
+                if ($action->code == 'TICKET_MSG_SENTBYMAIL' && $action->id > $last_message_id)
+                {
+                    $last_message = $action;
+                }
+            }
+
+            $ticket_creation_time = strtotime($ticket->datec);
+
+            $alert_first_response = false;
+            $alert_response_delay = false;
+
+            if (!$last_message)
+            {
+                $alert_first_response = (time() - $ticket_creation_time) > $DELAY_BEFORE_FIRST_RESPONSE;
+            }
+            else
+            {
+                $last_message_time = $last_message->datec;
+
+                echo $last_message_time;
+                echo '<br>';
+
+                $alert_response_delay = time() - $last_message_time > $DELAY_SINCE_LAST_RESPONSE;
+            }
+
+            $ticket->fetchObjectLinked();
+
+            $linked_objects = $ticket->linkedObjects;
+
+            /** @var Fichinter[] $linked_interventions */
+            $linked_interventions = $linked_objects['fichinter'] ?? [];
+
+            $alert_inactive_interventions = false;
+
+            if ($conf->observaciones && $conf->observaciones->enabled)
+            {
+                foreach ($linked_interventions as $intervention)
+                {
+                    if ($intervention->status == Fichinter::STATUS_CLOSED)
+                    {
+                        continue;
+                    }
+
+                    $observaciones = Observacion::get_all($db, ["fk_intervention = '" . $intervention->id . "'"]);
+
+                    $last_observacion_time = null;
+
+                    foreach ($observaciones as $observacion)
+                    {
+                        $observacion_time = strtotime($observacion->fecha);
+
+                        if ($observacion_time > $last_observacion_time)
+                        {
+                            $last_observacion_time = $observacion_time;
+                        }
+                    }
+
+                    if (!$last_observacion_time)
+                    {
+                        $intervention_creation_time = $intervention->datec;
+
+                        $alert_inactive_interventions = time() - $intervention_creation_time > $DELAY_SINCE_LAST_RESPONSE;
+                    }
+                    else
+                    {
+                        $alert_inactive_interventions = time() - $last_observacion_time > $DELAY_SINCE_LAST_RESPONSE;
+                    }
+
+                    if ($alert_inactive_interventions)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (!$alert_first_response && !$alert_response_delay && !$alert_inactive_interventions)
+            {
+                continue;
+            }
+
+            $inactive_tickets[$ticket->id] = [
+                "ticket" => $ticket,
+                "alert_first_response" => $alert_first_response,
+                "alert_response_delay" => $alert_response_delay,
+                "alert_inactive_interventions" => $alert_inactive_interventions
+            ];
         }
+
+        return $inactive_tickets;
+    }
+
+    public function inactive_tickets_notification()
+    {
+        global $conf, $db;
+
+        if (empty($conf->global->TICKETUTILS_SEND_EMAIL_NOTIFICATIONS_WHEN_DELAY))
+        {
+            dol_syslog('TICKETUTILS: DELAY NOTIFICATIONS DISABLED');
+            $this->output = 'Delay notifications disabled';
+            return 0;
+        }
+
+        $from = $conf->global->TICKET_NOTIFICATION_EMAIL_FROM;
+
+        if (!$from)
+        {
+            dol_syslog('TICKETUTILS: NO FROM EMAIL', LOG_ERR);
+            $this->output = 'No from email';
+
+            return -1;
+        }
+
+        $inactive_tickets = self::get_inactive_tickets();
+
+        if (empty($inactive_tickets))
+        {
+            dol_syslog('TICKETUTILS: NO INACTIVE TICKETS');
+            $this->output = 'No inactive tickets';
+            return 0;
+        }
+
+        $users_to_alert_ids = explode(';', $conf->global->TICKETUTILS_USERS_TO_ALERT_WHEN_DELAY);
+
+        $users_to_alert = [];
+
+        foreach ($users_to_alert_ids as $user_id)
+        {
+            $user_to_alert = new User($db);
+            $user_to_alert->fetch($user_id);
+
+            if ($user_to_alert->id > 0)
+            {
+                $users_to_alert[$user_to_alert->id] = $user_to_alert;
+            }
+        }
+
+        $tickets_for_users = [];
+
+        foreach ($inactive_tickets as $ticket_info)
+        {
+            $ticket = $ticket_info['ticket'];
+
+            if (!$ticket->fk_user_assign)
+            {
+                continue;
+            }
+
+            $tickets_for_users[$ticket->fk_user_assign][$ticket->id] = $ticket_info;
+        }
+
+        $general_result = self::general_delay_notification($users_to_alert, $inactive_tickets, true);
+
+        $users_results = [];
+
+        foreach ($tickets_for_users as $user_id => $user_tickets)
+        {
+            $ticket_user = new User($db);
+
+            if (isset($found_users[$user_id]))
+            {
+                $ticket_user = $found_users[$user_id];
+            }
+            else
+            {
+                $ticket_user->fetch($user_id);
+            }
+
+            $user_result = self::general_delay_notification([$ticket_user], $user_tickets);
+
+            $users_results[$user_id] = $user_result;
+        }
+
+        $this->output = json_encode([
+            'general' => $general_result,
+            'users' => $users_results
+        ]);
+
+        return 0;
+    }
+
+    /**
+     * @param User[] $users
+     * @param array{ticket:Ticket,alert_first_response:bool,alert_response_delay:bool,alert_inactive_interventions:bool}[] $inactive_tickets
+     */
+    public static function general_delay_notification($users, $inactive_tickets, $show_assigned_user = false)
+    {
+        global $db, $langs, $conf, $mysoc;
+
+        $with_alert_first_response = [];
+        $with_alert_response_delay = [];
+        $with_alert_inactive_interventions = [];
+
+        foreach ($inactive_tickets as $ticket_info)
+        {
+            if ($ticket_info['alert_first_response'])
+            {
+                $with_alert_first_response[] = $ticket_info['ticket'];
+            }
+            if ($ticket_info['alert_response_delay'])
+            {
+                $with_alert_response_delay[] = $ticket_info['ticket'];
+            }
+            if ($ticket_info['alert_inactive_interventions'])
+            {
+                $with_alert_inactive_interventions[] = $ticket_info['ticket'];
+            }
+        }
+
+        /** @var User[] $found_users */
+        $found_users = [];
+
+        $msg = '';
+
+        $msg .= $langs->trans('GeneralTicketDelayIntroduction');
+
+        $msg .= '<br>';
+        $msg .= '<br>';
+
+        if (!empty($with_alert_first_response))
+        {
+            $msg .= self::print_tickets_with_delay(
+                $langs->trans('TicketsWithDelayInFirstResponse'),
+                $with_alert_first_response,
+                $show_assigned_user
+            );
+
+            $msg .= '<br>';
+        }
+
+        if (!empty($with_alert_response_delay))
+        {
+            $msg .= self::print_tickets_with_delay(
+                $langs->trans('TicketsWithDelayInResponse'),
+                $with_alert_response_delay,
+                $show_assigned_user
+            );
+
+            $msg .= '<br>';
+        }
+
+        if (!empty($with_alert_inactive_interventions))
+        {
+            $msg .= self::print_tickets_with_delay(
+                $langs->trans('TicketsWithInactiveInterventions'),
+                $with_alert_inactive_interventions,
+                $show_assigned_user
+            );
+
+            $msg .= '<br>';
+        }
+
+        $subject = '[' . $mysoc->getFullName($langs) . '] - ' . $langs->trans('DelayInNTickets', count($inactive_tickets));
+
+        $from = $conf->global->TICKET_NOTIFICATION_EMAIL_FROM;
+
+        $sent = 0;
+        $not_sent = 0;
+
+        foreach ($users as $user)
+        {
+            $to = $user->email;
+
+            if (!$user->email || !$from)
+            {
+                $not_sent++;
+                continue;
+            }
+
+            $mail = new CMailFile(
+                $subject,
+                $to,
+                $from,
+                $msg,
+                [],
+                [],
+                [],
+                '',
+                '',
+                0,
+                1
+            );
+
+            try
+            {
+                $res = $mail->sendfile();
+            }
+            catch (Exception $e)
+            {
+                dol_syslog('TICKETUTILS: ERROR SENDING EMAIL: ' . $e->getMessage(), LOG_ERR);
+            }
+
+            if (!$res)
+            {
+                $not_sent++;
+                continue;
+            }
+
+            $sent++;
+        }
+
+        return ['sent' => $sent, 'not_sent' => $not_sent];
+    }
+
+    /**
+     * @param   string      $title
+     * @param   Ticket[]    $tickets
+     */
+    public static function print_tickets_with_delay($title, $tickets, $show_assigned_user = false)
+    {
+        global $langs, $db, $found_users;
+
+        $msg = '';
+
+        $msg .= '<b>';
+        $msg .= $title . ':';
+        $msg .= '</b>';
+
+        $msg .= '<br>';
+        $msg .= '<br>';
+
+        /* $msg .= '<ul>';
+        foreach ($tickets as $ticket)
+        {
+            $msg .= '<li>';
+
+            $msg .= '<a href="' . DOL_MAIN_URL_ROOT . '/ticket/card.php?id=' . $ticket->id . '">';
+            $msg .= $ticket->ref;
+            $msg .= '</a>';
+
+            $msg .= '<span>';
+            $msg .= ' - ' . $langs->trans('CreatedAt') . ': ' . $ticket->datec;
+            $msg .= '</span>';
+
+            if ($show_assigned_user)
+            {
+                $assigned_user = new User($db);
+
+                if (isset($found_users[$ticket->fk_user_assign]))
+                {
+                    $assigned_user = $found_users[$ticket->fk_user_assign];
+                }
+                else
+                {
+                    $assigned_user->fetch($ticket->fk_user_assign);
+                }
+
+                $msg .= '<span>';
+                $msg .= ' - ';
+                if ($assigned_user->id > 0)
+                {
+                    $msg .= $langs->trans('AssignedTo') . ': ' . $assigned_user->getFullName($langs);
+                }
+                else
+                {
+                    $msg .= '<b>' . $langs->trans('NotAssigned') . '</b>';
+                }
+                $msg .= '</span>';
+            }
+
+            $msg .= '</li>';
+        }
+        $msg .= '</ul>'; */
+
+        $msg .= '<table border="1" style="text-align: center; border-collapse: collapse" cellpadding="5">';
+
+        $msg .= '<thead>';
+        $msg .= '<tr>';
+
+        $msg .= '<th>';
+        $msg .= $langs->trans('Ticket');
+        $msg .= '</th>';
+
+        $msg .= '<th>';
+        $msg .= $langs->trans('Title');
+        $msg .= '</th>';
+
+        $msg .= '<th>';
+        $msg .= $langs->trans('CreationDate');
+        $msg .= '</th>';
+
+        if ($show_assigned_user)
+        {
+            $msg .= '<th>';
+            $msg .= $langs->trans('AssignedTo');
+            $msg .= '</th>';
+        }
+
+        $msg .= '</tr>';
+        $msg .= '</thead>';
+
+        $msg .= '<tbody>';
+        
+        foreach ($tickets as $ticket)
+        {
+            $msg .= '<tr>';
+
+            $msg .= '<td>';
+            $msg .= '<a href="' . DOL_MAIN_URL_ROOT . '/ticket/card.php?id=' . $ticket->id . '">';
+            $msg .= $ticket->ref;
+            $msg .= '</a>';
+            $msg .= '</td>';
+
+            $msg .= '<td>';
+            $msg .= $ticket->subject;
+            $msg .= '</td>';
+
+            $msg .= '<td>';
+            $msg .= $ticket->datec;
+            $msg .= '</td>';
+
+            if ($show_assigned_user)
+            {
+                $assigned_user = new User($db);
+
+                if (isset($found_users[$ticket->fk_user_assign]))
+                {
+                    $assigned_user = $found_users[$ticket->fk_user_assign];
+                }
+                else
+                {
+                    $assigned_user->fetch($ticket->fk_user_assign);
+                }
+
+                $msg .= '<td>';
+                if ($assigned_user->id > 0)
+                {
+                    $msg .= $assigned_user->getFullName($langs);
+                }
+                else
+                {
+                    $msg .= '<b>' . $langs->trans('NotAssigned') . '</b>';
+                }
+                $msg .= '</td>';
+            }
+
+            $msg .= '</tr>';
+        }
+        $msg .= '</tbody>';
+        
+        $msg .= '</table>';
+
+        return $msg;
     }
 }

@@ -71,6 +71,20 @@ AnsSetup = Configuración de ANS
 Types = Tipos
 SeverityLevels = Niveles de gravedad
 
+DelayInNTickets = Retrasos en %s tickets
+
+GeneralTicketDelayIntroduction = Se han encontrado tickets con procesos en retraso
+
+TicketsWithDelayInFirstResponse = No han recibido una primera respuesta
+TicketsWithDelayInResponse = Han sobrepasado el límite de tiempo sin recibir nuevas respuestas
+TicketsWithInactiveInterventions = No han recibido actualización en sus intervenciones
+
+CreatedAt = Creado el
+AssignedTo = Asignado a
+NotAssigned = Sin asignar
+
+SetupSendEmailNotificationsWhenDelay = Enviar notificaciones por correo cuando hay retrasos en los tickets
+
 #
 # SETUP
 #
