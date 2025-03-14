@@ -263,6 +263,8 @@ class TicketUtilsTicketCardHooks
                     {
                         return 1;
                     }
+
+                    break;
                 }
             case $langs->trans('CloseTicket'):
                 {

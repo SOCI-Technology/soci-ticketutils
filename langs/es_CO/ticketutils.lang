@@ -91,6 +91,16 @@ NoRating = Sin calificación
 
 Validation = Validación
 
+TicketUserStats = Estadísticas de tickets por usuario
+TotalTickets = Total
+TotalTicketsOpen = Tickets abiertos
+TotalTicketsClosed = Tickets cerrados
+TotalTicketsAbandoned = Tickets abandonados
+AvgCloseTime = Tiempo promedio de cierre
+LatestTicket = Ticket más reciente
+TotalWorkTime = Tiempo total trabajado
+AvgWorkTime = Promedio de tiempo trabajado
+
 #
 # SETUP
 #

@@ -90,6 +90,14 @@ class TicketUtilsLib
             $sql .= ", date_read = '" . $now . "'";
         }
 
+        $is_closing = $new_status == Ticket::STATUS_CLOSED || $new_status == Ticket::STATUS_CANCELED;
+
+        if ($is_closing)
+        {
+            $sql .= ", progress = '100'";
+            $sql .= ", date_close = '" . $now . "'";
+        }
+
         $sql .= " WHERE rowid = '" . $ticket->id . "'";
 
         $db->begin();
