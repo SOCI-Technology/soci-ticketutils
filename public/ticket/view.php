@@ -352,15 +352,24 @@ if ($action == "view_ticket" || $action == "presend" || $action == "close" || $a
 			echo '</td>';
 
 			echo '<td>';
-			echo '<div class="rating-container">';
-			for ($i = 1; $i <= 5; $i++)
-			{
-				$active = $i <= $rating ? 'active' : '';
 
-				echo '<i class="fas fa-star rating-item ' . $active . ' static">';
-				echo '</i>';
+			if ($rating === null)
+			{
+				echo $langs->trans('NoRating');
 			}
-			echo '</div>';
+			else
+			{
+				echo '<div class="rating-container">';
+				for ($i = 1; $i <= 5; $i++)
+				{
+					$active = $i <= $rating ? 'active' : '';
+	
+					echo '<i class="fas fa-star rating-item ' . $active . ' static">';
+					echo '</i>';
+				}
+				echo '</div>';
+			}
+			
 			echo '</td>';
 
 			echo '</tr>';

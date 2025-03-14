@@ -86,6 +86,11 @@ NotAssigned = Sin asignar
 
 SetupSendEmailNotificationsWhenDelay = Enviar notificaciones por correo cuando hay retrasos en los tickets
 
+TicketClosedAutomatically = Ticket %s cerrado automáticamente
+NoRating = Sin calificación
+
+Validation = Validación
+
 #
 # SETUP
 #
@@ -108,8 +113,12 @@ ErrorSavingSetting = Error al guardar configuración
 SetupAutoClosingMessage = Mensaje al cerrar tickets automáticamente
 DefaultAutoClosingMessage = Ticket cerrado automáticamente después de esperar el tiempo programado para validación de parte del solicitante
 
+MenuANS = Configuración
+MenuUserStats = Por usuario
+
 #
 # PERMISSIONS
 #
 
 PermAns = Modificar configuración de ANS
+PermReopenTickets = Reabrir tickets

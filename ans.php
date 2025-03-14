@@ -260,6 +260,44 @@ echo '</tr>';
  * End text of email after creating ticket
  */
 
+/**
+ * Notification footer
+ */
+$mail_signature = getDolGlobalString('TICKET_MESSAGE_MAIL_SIGNATURE');
+
+echo '<tr class="oddeven">';
+
+echo '<td>';
+echo $langs->trans("TicketMessageMailFooter");
+echo '</label>';
+echo '</td>';
+
+echo '<td>';
+require_once DOL_DOCUMENT_ROOT . '/core/class/doleditor.class.php';
+$doleditor = new DolEditor('TICKET_MESSAGE_MAIL_SIGNATURE', $mail_signature, '100%', 120, 'dolibarr_mailings', '', false, true, getDolGlobalInt('FCKEDITOR_ENABLE_MAIL'), ROWS_2, 70);
+
+echo '<form 
+method="POST"
+action="' . $form_action . '"
+style="display: flex; align-items: center; gap: 6px;"
+>';
+$doleditor->Create();
+
+echo '<button class="butAction" name="update_const">';
+echo $langs->trans('Save');
+echo '</button>';
+
+echo '<input type="hidden" name="const_name" value="TICKET_MESSAGE_MAIL_SIGNATURE">';
+
+echo '</form>';
+
+echo '</td>';
+
+echo '</tr>';
+/**
+ * End notification footer
+ */
+
 echo '</tbody>';
 /**
  * End body
@@ -332,7 +370,7 @@ if ($conf->global->TICKETUTILS_VALIDATION_STATUS)
 }
 
 /**
- * Text of email after auto closing
+ * Auto closing message
  */
 $auto_closing_message = getDolGlobalString("TICKETUTILS_AUTO_CLOSING_MESSAGE", $langs->trans('DefaultAutoClosingMessage'));
 echo '<tr>';
@@ -364,7 +402,7 @@ echo '</form>';
 echo '</td>';
 echo '</tr>';
 /**
- * End text of email after creating ticket
+ * End Auto closing message
  */
 
 /**

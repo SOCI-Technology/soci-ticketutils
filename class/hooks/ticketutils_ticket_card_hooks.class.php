@@ -199,7 +199,7 @@ class TicketUtilsTicketCardHooks
         $ticket_extrafields->fetch(0, $ticket->id);
 
         $rating = $ticket_extrafields->rating;
-        
+
         $w = '';
 
         $w .= '<tr>';
@@ -208,15 +208,24 @@ class TicketUtilsTicketCardHooks
         $w .= '</td>';
 
         $w .= '<td>';
-        $w .= '<div class="rating-container">';
-        for ($i = 1; $i <= 5; $i++)
-        {
-            $active = $i <= $rating ? 'active' : '';
 
-            $w .= '<i class="fas fa-star rating-item ' . $active . ' static">';
-            $w .= '</i>';
+        if ($rating === null)
+        {
+            $w .= $langs->trans('NoRating');
         }
-        $w .= '</div>';
+        else
+        {
+            $w .= '<div class="rating-container">';
+            for ($i = 1; $i <= 5; $i++)
+            {
+                $active = $i <= $rating ? 'active' : '';
+
+                $w .= '<i class="fas fa-star rating-item ' . $active . ' static">';
+                $w .= '</i>';
+            }
+            $w .= '</div>';
+        }
+
         $w .= '</td>';
 
         $w .= '</tr>';
@@ -230,9 +239,35 @@ class TicketUtilsTicketCardHooks
         $w .= '<td>';
         $w .= $ticket_extrafields->rating_comment;
         $w .= '</td>';
-        
+
         $w .= '</tr>';
 
         return $w;
+    }
+
+    /**
+     * @param   Ticket  $object
+     * @param   array   $button_parameters
+     */
+    public static function hide_buttons($ticket, $button_parameters)
+    {
+        global $user, $langs;
+
+        $content = $button_parameters['html'];
+
+        switch ($content)
+        {
+            case $langs->trans('ReOpen'):
+                {
+                    if (!$user->rights->ticketutils->ticket->reopen)
+                    {
+                        return 1;
+                    }
+                }
+            case $langs->trans('CloseTicket'):
+                {
+                    return 1;
+                }
+        }
     }
 }

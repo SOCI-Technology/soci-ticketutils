@@ -66,7 +66,8 @@ class modTicketutils extends DolibarrModules
 				'ticketlist',
 				'publicnewticketcard',
 				'ticketpubliclist',
-				'ticketpublicview'
+				'ticketpublicview',
+				'leftblock'
 			)
 		);
 		// Config pages. Put here list of php page names stored in admmin directory used to setup module.
@@ -110,6 +111,11 @@ class modTicketutils extends DolibarrModules
 		$this->rights[$r][5] = 'write';
 		$r++;
 
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", $r + 1);
+		$this->rights[$r][1] = 'PermReopenTickets';
+		$this->rights[$r][4] = 'ticket';
+		$this->rights[$r][5] = 'reopen';
+		$r++;
 
 		// Main menu entries
 		$this->menus = array();			// List of menus to add

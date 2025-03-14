@@ -297,4 +297,66 @@ class ActionsTicketUtils
             $this->resprints = $res;
         }
     }
+
+    function dolGetButtonAction($parameters, &$object, &$action, $hookmanager)
+    {
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('ticketcard', $param_context))
+        {
+            $res = TicketUtilsTicketCardHooks::hide_buttons($object, $parameters);
+
+            if ($res)
+            {
+                $this->resprints = '';
+                return 1;
+            }
+        }
+    }
+
+    function menuLeftMenuItems($parameters, &$object, &$action, $hookmanager)
+    {
+        global $langs;
+
+        $param_context = explode(':', $parameters['context']);
+
+        /* echo '<pre>';
+        print_r($object);
+        echo '</pre>'; */
+
+        $new_menu = [];
+
+        foreach ($object as &$menu)
+        {
+            $is_statistics = $menu['titre'] == $langs->trans('Statistics');
+
+            if ($is_statistics)
+            {
+                $menu['leftmenu'] = 'ticket_stats';
+            }
+
+            $new_menu[] = $menu;
+
+            if ($is_statistics)
+            {
+                $new_menu[] = [
+                    'fk_menu' => 'fk_mainmenu=ticket,fk_leftmenu=ticket_stats',
+                    'url' => '/custom/ticketutils/user_stats.php',
+                    'titre' => $langs->trans('MenuUserStats'),
+                    'level' => 2,
+                    'enabled' => 1,
+                    'target' => '',
+                    'mainmenu' => 'ticket',
+                    'leftmenu' => 'user_stats',
+                    'position' => 1,
+                    'classname' => '',
+                    'prefix' => '',
+                ];
+            }
+        }
+
+        $this->results = $new_menu;
+        
+        return 1;
+    }
 }

@@ -6,8 +6,6 @@ require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/lib/ticketutils.lib.php';
 
 $ticketutils_lib = new TicketUtilsLib();
 
-$inactive_tickets = $ticketutils_lib::get_inactive_tickets();
-
 /* foreach ($inactive_tickets as $ticket_info)
 {
     echo $ticket_info['ticket']->ref;
@@ -27,7 +25,7 @@ $inactive_tickets = $ticketutils_lib::get_inactive_tickets();
 
 // exit();
 
-$result = $ticketutils_lib->inactive_tickets_notification();
+$result = $ticketutils_lib->close_tickets_awaiting_validation();
 
 echo '<pre>';
 echo print_r(json_decode($ticketutils_lib->output, true));

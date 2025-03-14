@@ -998,6 +998,9 @@ class TicketUtilsLib
             return;
         }
 
+        $success = 0;
+        $error = 0;
+
         for ($i = 0; $i < $db->num_rows($resql); $i++)
         {
             $obj = $db->fetch_object($resql);
@@ -1040,11 +1043,26 @@ class TicketUtilsLib
 
             $change_to_waiting_event_time = $change_to_waiting_event->datec;
 
-            if (time() - $change_to_waiting_event_time > $VALIDATION_STATUS_CLOSING_TIME)
+
+            if (!(time() - $change_to_waiting_event_time > $VALIDATION_STATUS_CLOSING_TIME))
             {
-                $res = self::auto_close_ticket($ticket);
+                continue;
             }
+
+            $res = self::auto_close_ticket($ticket);
+
+            if (!$res)
+            {
+                $error++;
+                continue;
+            }
+
+            $success++;
         }
+
+        $this->output = json_encode(['success' => $success, 'error' => $error]);
+
+        return 0;
     }
 
     /**
@@ -1052,11 +1070,14 @@ class TicketUtilsLib
      */
     public static function auto_close_ticket($ticket)
     {
-        global $langs, $mysoc, $conf;
+        global $langs, $mysoc, $conf, $db;
 
         $message = $langs->trans('TicketClosedAutomatically', $ticket->ref);
 
-        $res = self::change_ticket_status($ticket, Ticket::STATUS_CLOSED, 0, $message);
+        $static_user = new User($db);
+        $static_user->id = 0;
+
+        $res = self::change_ticket_status($ticket, Ticket::STATUS_CLOSED, $static_user, $message);
 
         if (!($res > 0))
         {
@@ -1072,12 +1093,49 @@ class TicketUtilsLib
             return 1;
         }
 
-        $subject = '[' . $mysoc->getFullName($langs) . '] - ' . $langs->trans('TicketClosedAutomatically', $ticket->ref);
+        $id_to_use = $conf->global->TICKETUTILS_ONLY_ONE_ID ? 'ref' : 'track_id';
+
+        $subject = '[' . $mysoc->getFullName($langs) . '] - ' . $langs->transnoentitiesnoconv('TicketClosedAutomatically', $ticket->ref);
 
         $msg = '';
 
-        $msg .= getDolGlobalString("TICKETUTILS_AUTO_CLOSING_MESSAGE", $langs->trans('DefaultAutoClosingMessage'));
+        $msg .= getDolGlobalString("TICKETUTILS_AUTO_CLOSING_MESSAGE", $langs->transnoentitiesnoconv('DefaultAutoClosingMessage'));
 
         $msg .= '<br>';
+        $msg .= '<br>';
+
+        $msg .= $langs->transnoentitiesnoconv('LinkToTicket') . ': ' . DOL_MAIN_URL_ROOT . '/public/ticket/view.php?track_id=' . $ticket->$id_to_use . '&email=' . $ticket->origin_email;
+
+        $mail = new CMailFile(
+            $subject,
+            $to,
+            $from,
+            $msg,
+            [],
+            [],
+            [],
+            '',
+            '',
+            0,
+            1
+        );
+
+        $res = 0;
+
+        try
+        {
+            $res = $mail->sendfile();
+        }
+        catch (Exception $e)
+        {
+            dol_syslog('TICKETUTILS: ERROR SENDING EMAIL: ' . $e->getMessage(), LOG_ERR);
+        }
+
+        if (!$res)
+        {
+            return -1;
+        }
+
+        return 1;
     }
 }
