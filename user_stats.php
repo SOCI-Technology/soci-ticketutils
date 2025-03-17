@@ -17,7 +17,17 @@ $langs->loadLangs(['ticketutils@ticketutils']);
 $title = $langs->trans('TicketUserStats');
 
 $sort_by = GETPOST('sort_by') ?: 'total_tickets';
-$order = GETPOST('order') ?: 'asc';
+$order_by = GETPOST('order_by') ?: 'asc';
+
+$url_string = '';
+
+foreach ($_GET as $key => $value)
+{
+    if ($key != 'sort_by' && $key != 'order_by')
+    {
+        $url_string .= '&' . $key . '=' . urlencode($value);
+    }
+}
 
 llxHeader('', $title);
 
@@ -251,58 +261,120 @@ foreach ($user_tickets as $user_id => $user_tickets_info)
 $totals['avg_close_time'] = $totals['total_tickets_closed'] > 0 ? $totals['total_close_time'] / $totals['total_tickets_closed'] : 0;
 $totals['avg_work_time'] = $totals['total_tickets'] > 0 ? $totals['total_work_time'] / $totals['total_tickets'] : 0;
 
+$headers = [
+    'user' => $langs->trans('User'),
+    'total_tickets' => $langs->trans('TotalTickets'),
+    'total_tickets_open' => $langs->trans('TotalTicketsOpen'),
+    'total_tickets_closed' => $langs->trans('TotalTicketsClosed'),
+    'total_tickets_abandoned' => $langs->trans('TotalTicketsAbandoned'),
+    'avg_close_time' => $langs->trans('AvgCloseTime'),
+    'total_work_time' => $langs->trans('TotalWorkTime'),
+    'avg_work_time' => $langs->trans('AvgWorkTime'),
+    'latest_ticket' => $langs->trans('LatestTicket'),
+    'subject' => $langs->trans('Subject')
+];
+
 /**
  * TABLE
  */
 #region table
+echo '<form method="GET">';
+
+echo '<input type="hidden" name="sort_by" value="' . $sort_by . '">';
+echo '<input type="hidden" name="order_by" value="' . $order_by . '">';
+
 echo '<table class="noborder centpercent">';
 
 /**
  * Header
  */
 #region header
+$form = new Form($db);
+
 echo '<thead>';
+
+/**
+ * FILTERS
+ */
+#region filters
 echo '<tr class="liste_titre">';
 
-echo '<th>';
-echo $langs->trans('User');
+/**
+ * Date range
+ */
+echo '<th colspan="4">';
+echo '<span>';
+echo $langs->trans('From') . ' / ' . $langs->trans('Until') . ' ';
+echo '</span>';
+
+echo $form->selectDateToDate('', '', 're');
+
+echo '</th>';
+/**
+ * END Date range
+ */
+
+echo '<th colspan="5">';
+
+echo '<i class="fas fa-user paddingright"></i>';
+
+echo $form->select_dolusers(
+    '',
+    'userid',
+    0,
+    null,
+    0,
+    '',
+    '',
+    '0',
+    0,
+    0,
+    '',
+    0,
+    '',
+    '',
+    0,
+    0,
+    true
+);
 echo '</th>';
 
-echo '<th>';
-echo $langs->trans('TotalTickets');
+echo '<th class="right">';
+
+echo '<button class="liste_titre button_search reposition">';
+echo '<i class="fas fa-search"></i>';
+echo '</button>';
+
+echo '<button class="liste_titre button_removefilter reposition">';
+echo '<i class="fas fa-times"></i>';
+echo '</button>';
+
 echo '</th>';
 
-echo '<th>';
-echo $langs->trans('TotalTicketsOpen');
-echo '</th>';
+echo '</tr>';
+#endregion filters
+/**
+ * END FILTERS
+ */
 
-echo '<th>';
-echo $langs->trans('TotalTicketsClosed');
-echo '</th>';
+echo '<tr class="liste_titre">';
 
-echo '<th>';
-echo $langs->trans('TotalTicketsAbandoned');
-echo '</th>';
+foreach ($headers as $key => $header)
+{
+    $is_current_sort = $key == $sort_by;
+    $direction = $is_current_sort ? ($order_by == 'desc' ? 'asc' : 'desc') : 'desc';
 
-echo '<th>';
-echo $langs->trans('AvgCloseTime');
-echo '</th>';
+    $icon = $is_current_sort ? ('<i class="fas fa-caret-' . ($order_by == 'desc' ? 'down' : 'up') . '"></i>') : '';
 
-echo '<th>';
-echo $langs->trans('TotalWorkTime');
-echo '</th>';
+    echo '<th class="nowrap">';
+    echo '<a href="' . DOL_URL_ROOT . '/custom/ticketutils/user_stats.php?sort_by=' . urlencode($key) . '&order_by=' . urlencode($direction) . $url_string . '">';
+    echo $icon;
+    echo ' ';
+    echo $header;
+    echo '</a>';
+    echo '</th>';
+}
 
-echo '<th>';
-echo $langs->trans('AvgWorkTime');
-echo '</th>';
-
-echo '<th>';
-echo $langs->trans('LatestTicket');
-echo '</th>';
-
-echo '<th>';
-echo $langs->trans('Subject');
-echo '</th>';
 
 echo '</tr>';
 echo '</thead>';
@@ -367,14 +439,14 @@ echo '</tr>';
 #region body
 echo '<tbody>';
 
-uasort($user_stat_list, function ($a, $b) use ($sort_by, $order)
+uasort($user_stat_list, function ($a, $b) use ($sort_by, $order_by)
 {
     if ($a[$sort_by] == $b[$sort_by])
     {
         return 0;
     }
 
-    if ($order == 'asc')
+    if ($order_by == 'asc')
     {
         return $a[$sort_by] > $b[$sort_by] ? 1 : -1;
     }
@@ -454,6 +526,8 @@ echo '</tbody>';
  */
 
 echo '</table>';
+
+echo '</form>';
 #endregion
 /**
  * END TABLE
