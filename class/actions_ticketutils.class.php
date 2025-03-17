@@ -112,13 +112,24 @@ class ActionsTicketUtils
 
             if ($conf->global->TICKETUTILS_REQUIRE_CHANGE_STATUS_NOTE)
             {
-                if ($action == 'set_read' || $action == 'confirm_set_status')
+                if (in_array($action, ['set_read', 'confirm_set_status', 'abandon', 'close', 'reopen']))
                 {
                     $new_status = GETPOST('new_status');
 
-                    if ($action == 'set_read')
+                    switch ($action)
                     {
-                        $new_status = Ticket::STATUS_READ;
+                        case 'set_read':
+                            $new_status = Ticket::STATUS_READ;
+                            break;
+                        case 'abandon':
+                            $new_status = Ticket::STATUS_CANCELED;
+                            break;
+                        case 'close':
+                            $new_status = Ticket::STATUS_CLOSED;
+                            break;
+                        case 'reopen':
+                            $new_status = Ticket::STATUS_IN_PROGRESS;
+                            break;
                     }
 
                     $res = TicketUtilsTicketCardHooks::confirm_change_status($object, $new_status);
@@ -216,7 +227,13 @@ class ActionsTicketUtils
             {
                 $context = in_array('ticketcard', $param_context) ? 'ticketcard' : '';
 
-                TicketUtilsLib::replace_ticket_status($object, $context);
+                $w = TicketUtilsLib::replace_ticket_status($object, $context);
+
+                if ($w)
+                {
+                    $this->resprints = $w;
+                    return 1;
+                }
             }
         }
     }
@@ -358,5 +375,17 @@ class ActionsTicketUtils
         $this->results = $new_menu;
         
         return 1;
+    }
+
+    function addMoreActionsButtons($parameters, &$object, &$action, $hookmanager)
+    {
+        $param_context = explode(':', $parameters['context']);
+
+        if (in_array('ticketcard', $param_context))
+        {
+            echo TicketUtilsTicketCardHooks::button_abandon_request($object);
+            echo TicketUtilsTicketCardHooks::button_abandon($object);
+            echo TicketUtilsTicketCardHooks::button_reopen_abandon_request($object);
+        }
     }
 }

@@ -27,6 +27,7 @@ TicketStatusWaitingValidation = Esperando validación
 TicketStatusNeedMoreInformation = Esperando comentarios
 TicketStatusClosed = Resuelto
 TicketStatusAbandoned = Abandonado
+TicketStatusAbandonRequest = Solicitud de abandono
 
 Observations = Observaciones
 
@@ -101,6 +102,16 @@ LatestTicket = Ticket más reciente
 TotalWorkTime = Tiempo total trabajado
 AvgWorkTime = Promedio de tiempo trabajado
 
+RequestAbandonTicket = Solicitar abandono
+TicketAbandonRequestModalDescription = Solicitar abandono del ticket
+
+Justification = Justificación
+
+TicketAbandonRequestSubject = Solicitud de abandonar ticket %s
+TicketAbandonRequestMessage = Se ha marcado el ticket %s para ser abandonado
+
+AbandonRequestSent = Solicitud de abandono enviada
+
 #
 # SETUP
 #
@@ -132,3 +143,4 @@ MenuUserStats = Por usuario
 
 PermAns = Modificar configuración de ANS
 PermReopenTickets = Reabrir tickets
+PermAbandonTickets = Abandonar tickets

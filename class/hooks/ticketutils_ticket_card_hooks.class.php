@@ -270,6 +270,101 @@ class TicketUtilsTicketCardHooks
                 {
                     return 1;
                 }
+            case $langs->trans('AbandonTicket'):
+                {
+                    if (!$user->rights->ticketutils->ticket->abandon)
+                    {
+                        return 1;
+                    }
+
+                    break;
+                }
+        }
+    }
+
+    /**
+     * @param   Ticket  $ticket
+     */
+    public static function button_abandon_request($ticket)
+    {
+        global $user, $langs;
+
+        if ($user->rights->ticketutils->ticket->abandon)
+        {
+            return;
+        }
+
+        if ($ticket->status == TicketUtilsLib::TICKET_STATUS_ABANDON_REQUEST)
+        {
+            return;
+        }
+
+        SociLib::load_components([SOCILIB_MODAL]);
+
+        $form_action = DOL_URL_ROOT . '/custom/ticketutils/inc/ticket_card.inc.php';
+
+        $c = '';
+
+        $c .= '<div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left">';
+
+        $c .= '<span>';
+        $c .= $langs->trans('TicketAbandonRequestModalDescription');
+        $c .= '</span>';
+
+        $c .= '<b>';
+        $c .= $langs->trans('Justification') . ': ';
+        $c .= '</b>';
+
+        $c .= '<textarea name="message" style="min-width: 300px; height: 100px" required>';
+        $c .= '</textarea>';
+
+        $c .= '<input type="hidden" name="id" value="' . $ticket->id . '">';
+
+        $c .= '</div>';
+
+        $w = '';
+
+        $w .= SociModal::print(
+            'abandon_request_modal',
+            $form_action,
+            'request_abandon',
+            $langs->trans('AbandonTicket'),
+            $c
+        );
+
+
+        $w .= '<a class="butAction toggle-modal" data-modal-id="abandon_request_modal">';
+        $w .= $langs->trans('RequestAbandonTicket');
+        $w .= '</a>';
+
+        return $w;
+    }
+
+    /**
+     * @param   Ticket  $object
+     */
+    public static function button_abandon($object)
+    {
+        global $langs, $user;
+
+        // Abadon ticket if statut is read
+        if (isset($object->status) && $object->status == TicketUtilsLib::TICKET_STATUS_ABANDON_REQUEST && $user->rights->ticketutils->ticket->abandon)
+        {
+            return dolGetButtonAction('', $langs->trans('AbandonTicket'), 'default', $_SERVER["PHP_SELF"] . '?action=abandon&token=' . newToken() . '&track_id=' . $object->track_id, '');
+        }
+    }
+
+    /**
+     * @param   Ticket  $object
+     */
+    public static function button_reopen_abandon_request($object)
+    {
+        global $langs, $user;
+
+        // Re-open ticket
+        if (!$user->socid && (isset($object->status) && ($object->status == TicketUtilsLib::TICKET_STATUS_ABANDON_REQUEST)) && !$user->socid && $user->rights->tickeutils->ticket->reopen)
+        {
+            return dolGetButtonAction('', $langs->trans('ReOpen'), 'default', $_SERVER["PHP_SELF"] . '?action=reopen&token=' . newToken() . '&track_id=' . $object->track_id, '');
         }
     }
 }

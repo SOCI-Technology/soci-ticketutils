@@ -9,6 +9,8 @@ class TicketUtilsLib
 {
     public $output;
 
+    const TICKET_STATUS_ABANDON_REQUEST = 20;
+
     /**
      * Prepare the tabs for the setup page of the module
      * 
@@ -100,6 +102,8 @@ class TicketUtilsLib
 
         $sql .= " WHERE rowid = '" . $ticket->id . "'";
 
+        $trigger_name = $is_closing ? 'TICKET_CLOSE' : 'TICKET_CHANGE_STATUS';
+
         $db->begin();
 
         $resql = $db->query($sql);
@@ -110,7 +114,13 @@ class TicketUtilsLib
             return -1;
         }
 
-        $label = $label ?: $langs->trans('TicketStatusChangedTo', $ticket->ref, $langs->transnoentitiesnoconv($ticket->statuts[$new_status]));
+        $ticket->call_trigger($trigger_name, $user);
+
+        $status_labels = $ticket->statuts;
+
+        $status_labels[self::TICKET_STATUS_ABANDON_REQUEST] = 'TicketStatusAbandonRequest';
+
+        $label = $label ?: $langs->trans('TicketStatusChangedTo', $ticket->ref, $langs->transnoentitiesnoconv($status_labels[$new_status]));
         $message = $message ?: $label;
 
         $res = self::create_ticket_event($ticket, $message, $label, $user);
@@ -177,7 +187,7 @@ class TicketUtilsLib
      */
     public static function replace_ticket_status(&$ticket, $context = '')
     {
-        global $langs, $conf;
+        global $langs, $conf, $labelStatus, $labelStatusShort, $statusType, $mode;
 
         $langs->load('ticketutils@ticketutils');
 
@@ -220,6 +230,20 @@ class TicketUtilsLib
 
         $ticket->statuts = $labels;
         $ticket->statuts_short = $labels;
+
+        if ($ticket->status == self::TICKET_STATUS_ABANDON_REQUEST)
+        {
+            $w = dolGetStatus(
+                $langs->trans('TicketStatusAbandonRequest'),
+                $langs->trans('TicketStatusAbandonRequest'),
+                '',
+                'status8',
+                4,
+                ''
+            );
+
+            return $w;
+        }
     }
 
     /**
@@ -1145,5 +1169,159 @@ class TicketUtilsLib
         }
 
         return 1;
+    }
+
+    public static function request_abandon_ticket(Ticket $ticket, string $message)
+    {
+        global $db, $conf, $langs, $user;
+
+        $res = self::change_ticket_status($ticket, self::TICKET_STATUS_ABANDON_REQUEST, $user, $message);
+
+        if (!($res > 0))
+        {
+            dol_syslog('TICKETUTILS: ERROR CHANGING TICKET STATUS: ' . $ticket->error, LOG_ERR);
+            return -1;
+        }
+
+        self::send_abandon_request_message($ticket, $message);
+    }
+
+    /**
+     * @param Ticket $ticket
+     */
+    public static function send_abandon_request_message($ticket, $message)
+    {
+        global $db, $conf, $mysoc, $langs;
+
+        $can_abandon_users = self::get_ticket_abandon_users();
+
+        $from = $conf->global->TICKET_NOTIFICATION_EMAIL_FROM;
+
+        if (!$from)
+        {
+            dol_syslog('TICKETUTILS: NO FROM EMAIL', LOG_WARNING);
+            return -1;
+        }
+
+        $subject = '[' . $mysoc->getFullName($langs) . '] - ' . $langs->transnoentitiesnoconv('TicketAbandonRequestSubject', $ticket->ref);
+
+        $msg = '';
+
+        $msg .= $langs->trans('TicketAbandonRequestMessage', $ticket->ref);
+
+        $msg .= '<br>';
+        $msg .= '<br>';
+
+        $msg .= '<b>';
+        $msg .= $langs->trans('Subject') . ': ';
+        $msg .= '</b>';
+        $msg .= $ticket->subject;
+
+        $msg .= '<br>';
+
+        $msg .= '<b>' . $langs->trans('Justification') . ': </b>' . $message;
+
+        $msg .= '<br>';
+        $msg .= '<br>';
+
+        $msg .= $langs->trans('LinkToTicket') . ': ';
+        $msg .= '<a href="' . DOL_MAIN_URL_ROOT . '/ticket/card.php?id=' . $ticket->id . '">';
+        $msg .= $ticket->ref;
+        $msg .= '</a>';
+
+        $success = 0;
+        $error = 0;
+
+        foreach ($can_abandon_users as $abandon_user)
+        {
+            $to = $abandon_user->email;
+
+            if (!$to)
+            {
+                dol_syslog('TICKETUTILS: NO TO EMAIL FOR USER ' . $abandon_user->id, LOG_WARNING);
+                continue;
+            }
+
+            $mail = new CMailFile(
+                $subject,
+                $to,
+                $from,
+                $msg,
+                [],
+                [],
+                [],
+                '',
+                '',
+                0,
+                1
+            );
+
+            try
+            {
+                $res = $mail->sendfile();
+
+                if (!$res)
+                {
+                    setEventMessage($langs->trans('ErrorSendingEmail', $mail->error), 'error');
+                    continue;
+                }
+
+                $success++;
+            }
+            catch (Exception $e)
+            {
+                dol_syslog('TICKETUTILS: ERROR SENDING EMAIL: ' . $e->getMessage(), LOG_ERR);
+                setEventMessage($langs->trans('ErrorSendingEmail', $e->getMessage()), 'error');
+
+                $error++;
+            }
+
+            return [$success, $error];
+        }
+    }
+
+    public static function get_ticket_abandon_users()
+    {
+        global $db;
+
+        $right_sql = "";
+        $right_sql = "SELECT id FROM " . MAIN_DB_PREFIX . "rights_def WHERE libelle = 'PermAbandonTickets'";
+
+        $resql = $db->query($right_sql);
+
+        if (!$resql)
+        {
+            return [];
+        }
+
+        $obj = $db->fetch_object($resql);
+
+        if (!$obj)
+        {
+            return [];
+        }
+
+        $sql = "";
+        $sql .= "SELECT u.rowid as user_id FROM " . MAIN_DB_PREFIX . "user as u";
+        $sql .= " INNER JOIN " . MAIN_DB_PREFIX . "user_rights as ur";
+        $sql .= " ON u.rowid = ur.fk_user";
+        $sql .= " WHERE ur.fk_id = " . $obj->id;
+        $sql .= " GROUP BY u.rowid";
+
+        $resql = $db->query($sql);
+
+        $users = [];
+
+        for ($i = 0; $i < $db->num_rows($resql); $i++)
+        {
+            $obj = $db->fetch_object($resql);
+
+            $checker_user = new User($db);
+            $checker_user->fetch($obj->user_id);
+
+            $users[] = $checker_user;
+        }
+
+        return $users;
     }
 }

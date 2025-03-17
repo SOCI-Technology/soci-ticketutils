@@ -117,6 +117,12 @@ class modTicketutils extends DolibarrModules
 		$this->rights[$r][5] = 'reopen';
 		$r++;
 
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", $r + 1);
+		$this->rights[$r][1] = 'PermAbandonTickets';
+		$this->rights[$r][4] = 'ticket';
+		$this->rights[$r][5] = 'abandon';
+		$r++;
+
 		// Main menu entries
 		$this->menus = array();			// List of menus to add
 		$r = 0;
