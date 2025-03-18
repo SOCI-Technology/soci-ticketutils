@@ -165,6 +165,18 @@ class ActionsTicketUtils
                 }
             }
         }
+
+        if (in_array('ticketlist', $param_context) || in_array('projectticket', $param_context) || in_array('thirdpartyticket', $param_context))
+        {
+            global $user, $mode;
+
+            if ($user->rights->ticketutils->ticket->all)
+            {
+                return;
+            }
+
+            $mode = 'mine';
+        }
     }
 
     function formObjectOptions($parameters, &$object, &$action, $hookmanager)
@@ -333,7 +345,7 @@ class ActionsTicketUtils
 
     function menuLeftMenuItems($parameters, &$object, &$action, $hookmanager)
     {
-        global $langs;
+        global $langs, $user;
 
         $param_context = explode(':', $parameters['context']);
 
@@ -343,8 +355,18 @@ class ActionsTicketUtils
 
         $new_menu = [];
 
+        $can_see_all_tickets = $user->rights->ticketutils->ticket->all;
+
         foreach ($object as &$menu)
         {
+            if (!$can_see_all_tickets)
+            {
+                if ($menu['leftmenu'] == 'ticketlist')
+                {
+                    continue;
+                }
+            }
+
             $is_statistics = $menu['titre'] == $langs->trans('Statistics');
 
             if ($is_statistics)
@@ -373,7 +395,7 @@ class ActionsTicketUtils
         }
 
         $this->results = $new_menu;
-        
+
         return 1;
     }
 
@@ -386,6 +408,56 @@ class ActionsTicketUtils
             echo TicketUtilsTicketCardHooks::button_abandon_request($object);
             echo TicketUtilsTicketCardHooks::button_abandon($object);
             echo TicketUtilsTicketCardHooks::button_reopen_abandon_request($object);
+        }
+    }
+
+    function addOpenElementsDashboardLine($parameters, &$object, &$action, $hookmanager)
+    {
+        $res = TicketUtilsLib::replace_ticket_board();
+
+        $this->results = $res;
+
+        return 0;
+    }
+
+    function addOpenElementsDashboardGroup($parameters, &$object, &$action, $hookmanager)
+    {
+        $res = [
+            'ticket' => [
+                'groupName' => 'Tickets',
+                'globalStatsKey' => 'ticket',
+                'stats' => ['ticket_opened', 'ticket_waiting']
+            ]
+        ];
+
+        $this->results = $res;
+
+        return 0;
+    }
+
+    function completeTabsHead($parameters, &$object, &$action, $hookmanager)
+    {
+        global $conf, $user;
+
+        $sent_object = $parameters['object'];
+
+        if ($sent_object->element == 'ticket')
+        {
+            /** @var Ticket */
+            $ticket = $sent_object;
+
+            if ($user->rights->ticketutils->ticket->all)
+            {
+                return 0;
+            }
+
+            if ($ticket->fk_user_assign == $user->id || $ticket->fk_user_create == $user->id)
+            {
+                return 0;
+            }
+
+            accessforbidden('', 0);
+            exit();
         }
     }
 }

@@ -19,6 +19,8 @@ $title = $langs->trans('TicketUserStats');
 $sort_by = GETPOST('sort_by') ?: 'total_tickets';
 $order_by = GETPOST('order_by') ?: 'asc';
 
+$can_see_all_tickets = $user->rights->ticketutils->ticket->all;
+
 $url_string = '';
 
 foreach ($_GET as $key => $value)
@@ -34,6 +36,27 @@ llxHeader('', $title);
 echo load_fiche_titre($title, '', 'chart');
 
 $ticket_example = new Ticket($db);
+
+$date_start_day = GETPOST('date_startday');
+$date_start_month = GETPOST('date_startmonth');
+$date_start_year = GETPOST('date_startyear');
+
+if ($date_start_day)
+{
+    $date_start = $date_start_year . '-' . $date_start_month . '-' . $date_start_day;
+}
+
+
+$date_end_day = GETPOST('date_endday');
+$date_end_month = GETPOST('date_endmonth');
+$date_end_year = GETPOST('date_endyear');
+
+if ($date_end_day)
+{
+    $date_end = $date_end_year . '-' . $date_end_month . '-' . $date_end_day;
+}
+
+$user_id_list = GETPOST('userid');
 
 /**
  * TICKET QUERY
@@ -62,7 +85,27 @@ $sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "ticket as t ON t.fk_user_assign = u.ro
 
 $sql .= " WHERE t.fk_user_assign > 0";
 
+if ($date_start)
+{
+    $sql .= " AND t.datec >= '" . SociLibStrings::format_date('Y-m-d', $date_start) . "'";
+}
+if ($date_end)
+{
+    $sql .= " AND t.datec <= '" . SociLibStrings::format_date('Y-m-d', $date_end) . "'";
+}
+
+if ($user_id_list)
+{
+    $sql .= " AND u.rowid IN (" . join(', ', $user_id_list) . ")";
+}
+
+if (!$can_see_all_tickets)
+{
+    $sql .= " AND (t.fk_user_assign = '" . $user->id . "' OR t.fk_user_create = '" . $user->id . "')";
+}
+
 $ticket_resql = $db->query($sql);
+$ticket_num = $db->num_rows($ticket_resql);
 /**
  * END TICKET QUERY
  */
@@ -307,7 +350,7 @@ echo '<span>';
 echo $langs->trans('From') . ' / ' . $langs->trans('Until') . ' ';
 echo '</span>';
 
-echo $form->selectDateToDate('', '', 're');
+echo $form->selectDateToDate($date_start, $date_end, 'date');
 
 echo '</th>';
 /**
@@ -319,7 +362,7 @@ echo '<th colspan="5">';
 echo '<i class="fas fa-user paddingright"></i>';
 
 echo $form->select_dolusers(
-    '',
+    $user_id_list,
     'userid',
     0,
     null,
@@ -345,9 +388,9 @@ echo '<button class="liste_titre button_search reposition">';
 echo '<i class="fas fa-search"></i>';
 echo '</button>';
 
-echo '<button class="liste_titre button_removefilter reposition">';
+echo '<a class="liste_titre button_removefilter reposition" href="' . DOL_URL_ROOT . '/custom/ticketutils/user_stats.php">';
 echo '<i class="fas fa-times"></i>';
-echo '</button>';
+echo '</a>';
 
 echo '</th>';
 
@@ -453,6 +496,15 @@ uasort($user_stat_list, function ($a, $b) use ($sort_by, $order_by)
 
     return $a[$sort_by] < $b[$sort_by] ? 1 : -1;
 });
+
+if (!($ticket_num > 0))
+{
+    echo '<tr class="liste_total">';
+    echo '<td colspan="11">';
+    echo $langs->trans('NoResults');
+    echo '</td>';
+    echo '</tr>';
+}
 
 foreach ($user_stat_list as $user_stats)
 {

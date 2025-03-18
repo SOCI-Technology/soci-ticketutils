@@ -1324,4 +1324,121 @@ class TicketUtilsLib
 
         return $users;
     }
+
+    public static function replace_ticket_board()
+    {
+        global $user, $db, $conf;
+
+        include_once DOL_DOCUMENT_ROOT . '/ticket/class/ticket.class.php';
+        $board = new Ticket($db);
+
+        $res = [];
+
+        $res[$board->element . '_opened'] = self::ticket_load_board($user, "opened");
+        // Number of active services (expired)
+        if ($conf->global->TICKETUTILS_VALIDATION_STATUS)
+        {
+            $res[$board->element . '_waiting'] = self::ticket_load_board($user, "waiting");
+        }
+
+        return $res;
+    }
+
+    /**
+     * @param User $user
+     */
+    public static function ticket_load_board($user, $mode)
+    {
+        // phpcs:enable
+        global $conf, $langs, $db;
+
+        $ticket = new Ticket($db);
+
+        $now = dol_now();
+        $delay_warning = 0;
+
+        $can_see_all = $user->rights->ticketutils->ticket->all;
+
+        $ticket->nbtodo = $ticket->nbtodolate = 0;
+
+        $sql = "SELECT p.rowid, p.ref, p.datec as datec, p.date_last_msg_sent";
+        $sql .= " FROM " . MAIN_DB_PREFIX . "ticket as p";
+
+        $sql .= " WHERE p.entity IN (" . getEntity('ticket') . ")";
+        if ($mode == 'opened')
+        {
+            $sql .= " AND p.fk_statut NOT IN (" . Ticket::STATUS_CLOSED . ", " . Ticket::STATUS_CANCELED . ")";
+        }
+        if ($mode == 'waiting')
+        {
+            $sql .= " AND p.fk_statut = " . Ticket::STATUS_NEED_MORE_INFO . "";
+        }
+        if ($user->socid)
+        {
+            $sql .= " AND p.fk_soc = " . ((int) $user->socid);
+        }
+        if (!$can_see_all)
+        {
+            $sql .= " AND (p.fk_user_assign = '" . $user->id . "' OR p.fk_user_create = '" . $user->id . "')";
+        }
+
+        $resql = $db->query($sql);
+
+        if (!$resql)
+        {
+            $ticket->error = $db->lasterror();
+            return -1;
+        }
+
+        $label = $labelShort = '';
+        $status = '';
+
+        $last_response_delay = $conf->global->TICKET_DELAY_SINCE_LAST_RESPONSE;
+        $first_response_delay = $conf->global->TICKET_DELAY_BEFORE_FIRST_RESPONSE;
+
+        $last_response_delay_seconds = $last_response_delay * 3600;
+        $first_response_delay_seconds = $first_response_delay * 3600;
+
+        if ($mode == 'opened')
+        {
+            $status = 'openall';
+            //$delay_warning = 0;
+            $label = $langs->trans("MenuListNonClosed");
+            $labelShort = $langs->trans("MenuListNonClosed");
+        }
+        if ($mode == 'waiting')
+        {
+            $status = Ticket::STATUS_NEED_MORE_INFO;
+            $label = $langs->trans('MenuListTicketWaiting');
+            $labelShort = $langs->trans('MenuListTicketWaiting');
+        }
+
+        $response = new WorkboardResponse();
+        $response->warning_delay = $last_response_delay / 24;
+        $response->label = $label;
+        $response->labelShort = $labelShort;
+        $response->url = DOL_URL_ROOT . '/ticket/list.php?search_fk_statut[]=' . $status;
+        $response->img = img_object('', "ticket");
+
+        while ($obj = $db->fetch_object($resql))
+        {
+            $response->nbtodo++;
+            if ($mode == 'opened')
+            {
+                $ticket_create_time = strtotime($obj->datec);
+
+                $ticket_last_msg_time = $obj->date_last_msg_sent ? strtotime($obj->date_last_msg_sent) : 0;
+
+                $late_first_response = $first_response_delay_seconds > 0 && (!$ticket_last_msg_time && (time() - $ticket_create_time) > $first_response_delay_seconds);
+                $late_last_response = $last_response_delay_seconds > 0 && (time() - $ticket_last_msg_time) > $last_response_delay_seconds;
+
+                if ($late_first_response || $late_last_response)
+                {
+                    $response->nbtodolate++;
+                }
+            }
+        }
+
+        return $response;
+    }
 }
