@@ -23,7 +23,7 @@ TicketStatusNotAssigned = No asignado
 TicketStatusAssigned = Asignado
 TicketStatusInProgress = En progreso
 TicketStatusWaiting = En espera
-TicketStatusWaitingValidation = Esperando validación
+TicketStatusWaitingValidation = Esperando aprobación
 TicketStatusNeedMoreInformation = Esperando comentarios
 TicketStatusClosed = Resuelto
 TicketStatusAbandoned = Abandonado
@@ -64,7 +64,7 @@ TicketRated = Ticket calificado
 ErrorRejectingTicket = Error al rechazar ticket
 TicketRejected = Solución al ticket rechazada
 
-AwaitingValidationSubject = Esperando validación de ticket - Ref %s
+AwaitingValidationSubject = Esperando aprobación de ticket - Ref %s
 AwaitingValidationMessage = Se ha marcado un ticket para su validación, por favor ingrese al enlace para aceptar o rechazar la solución propuesta
 
 NoComments = Sin comentarios
@@ -112,7 +112,7 @@ TicketAbandonRequestMessage = Se ha marcado el ticket %s para ser abandonado
 
 AbandonRequestSent = Solicitud de abandono enviada
 
-MenuListTicketWaiting = Esperando validación
+MenuListTicketWaiting = Esperando aprobación
 
 #
 # SETUP
@@ -123,11 +123,11 @@ SetupTicketMessageShowCharacterCount = Mostrar contador de caracteres en el mens
 SetupInactiveTicketNotification = Enviar notificaciones para tickets inactivos
 SetupHelpRequest = Opción para realizar una solicitud de apoyo a otro usuario
 SetupStatistics = Vista de estadísticas adicionales sobre los tickets
-SetupValidationStatus = Añadir estado "Esperando validación" para aprobación de parte del cliente
+SetupValidationStatus = Añadir estado "Esperando aprobación" para aprobación de parte del cliente
 SetupSelectCompany = Permitir escoger una empresa específica cuando el correo con el que se crea un ticket pertenece a varios contactos
 SetupOnlyOneId = Usar la referencia del ticket como único identificador
 SetupAlterStatusLogic = Alterar lógica general de los estados de los tickets
-SetupValidationStatusClosingTimeHours = Tiempo de espera antes de cerrar el ticket cuando se encuentra esperando validación (horas)
+SetupValidationStatusClosingTimeHours = Tiempo de espera antes de cerrar el ticket cuando se encuentra esperando aprobación (horas)
 SetupUsersToAlertWhenDelay = Usuarios que alertar cuando haya retraso en los tickets (Además del usuario asignado)
 
 SettingSaved = Configuración guardada
