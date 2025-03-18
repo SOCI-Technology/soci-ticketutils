@@ -357,6 +357,10 @@ class ActionsTicketUtils
 
         $can_see_all_tickets = $user->rights->ticketutils->ticket->all;
 
+        /* echo '<pre>';
+        print_r($object);
+        echo '</pre>'; */
+
         foreach ($object as &$menu)
         {
             if (!$can_see_all_tickets)
@@ -367,7 +371,7 @@ class ActionsTicketUtils
                 }
             }
 
-            $is_statistics = $menu['titre'] == $langs->trans('Statistics');
+            $is_statistics = $menu['titre'] == $langs->trans('Statistics') && $menu['mainmenu'] == 'ticket';
 
             if ($is_statistics)
             {
