@@ -3,7 +3,10 @@
 require_once DOL_DOCUMENT_ROOT . '/ticket/class/ticket.class.php';
 require_once DOL_DOCUMENT_ROOT . '/comm/action/class/actioncomm.class.php';
 
-require_once DOL_DOCUMENT_ROOT . '/custom/observaciones/class/observacion.class.php';
+if ($conf->observaciones)
+{
+    require_once DOL_DOCUMENT_ROOT . '/custom/observaciones/class/observacion.class.php';
+}
 
 class TicketUtilsLib
 {
