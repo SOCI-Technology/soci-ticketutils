@@ -47,7 +47,13 @@ class TicketUtilsCreateTicketHooks
     public static function replace_create_ticket(&$object, &$action)
     {
         global $langs, $conf, $db, $user, $with_contact, $extrafields;
-        
+
+        /* echo '<pre>';
+        print_r($_POST);
+        echo '</pre>';
+
+        exit(); */
+
         $error = 0;
         $origin_email = GETPOST('email', 'alpha');
         if (empty($origin_email))
@@ -265,6 +271,11 @@ class TicketUtilsCreateTicketHooks
             $usertoassign = $contacts[$cid]->id;
         }
 
+        if (GETPOST('socid') > 0)
+        {
+            $object->fk_soc = GETPOST('socid');
+        }
+
         $ret = $extrafields->setOptionalsFromPost(null, $object);
 
         // Generate new ref
@@ -443,5 +454,39 @@ class TicketUtilsCreateTicketHooks
 
         header("Location: index.php" . (!empty($entity) && isModEnabled('multicompany') ? '?entity=' . $entity : ''));
         exit;
+    }
+
+    public static function add_select_company()
+    {
+        global $langs;
+        
+        $w = '';
+
+        $w .= '<div id="select_company_container" style="display: none">';
+
+        $w .= '<table>';
+        $w .= '<tr id="select_company_row" style="display: none">';
+
+        $w .= '<td>';
+        $w .= '<span class="fieldrequired">';
+        $w .= $langs->trans('ThirdParty');
+        $w .= '</span>';
+        $w .= '</td>';
+
+        $w .= '<td>';
+        $w .= '<select id="select_company" name="socid">';
+        $w .= '</select>';
+        $w .= '</td>';
+
+        $w .= '</tr>';
+        $w .= '</table>';
+
+        $w .= '</div>';
+
+        $w .= '<input type="hidden" id="URL_ROOT" value="' . DOL_URL_ROOT . '">';
+
+        $w .= '<script src="' . DOL_URL_ROOT . '/custom/ticketutils/js/select_company.js?time=' . time() . '    "></script>';
+
+        return $w;
     }
 }

@@ -158,11 +158,19 @@ class ActionsTicketUtils
         {
             if ($action == 'create_ticket' && GETPOST('save', 'alpha'))
             {
-                if ($conf->global->TICKETUTILS_ONLY_ONE_ID)
+                if (GETPOST('save', 'alpha'))
                 {
-                    TicketUtilsCreateTicketHooks::replace_create_ticket($object, $action);
-                    return 1;
+                    if ($conf->global->TICKETUTILS_ONLY_ONE_ID)
+                    {
+                        TicketUtilsCreateTicketHooks::replace_create_ticket($object, $action);
+                        return 1;
+                    }
                 }
+            }
+
+            if ($conf->global->TICKETUTILS_SELECT_COMPANY)
+            {
+                echo TicketUtilsCreateTicketHooks::add_select_company();
             }
         }
 
