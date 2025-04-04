@@ -3,6 +3,8 @@
 require_once DOL_DOCUMENT_ROOT . '/ticket/class/ticket.class.php';
 require_once DOL_DOCUMENT_ROOT . '/comm/action/class/actioncomm.class.php';
 
+require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_time.class.php';
+
 if ($conf->observaciones)
 {
     require_once DOL_DOCUMENT_ROOT . '/custom/observaciones/class/observacion.class.php';
@@ -489,6 +491,30 @@ class TicketUtilsLib
         return 1;
     }
 
+    public static function get_elapsed_time($time_start, $time_end)
+    {
+        global $conf;
+
+        $use_work_days = $conf->global->TICKETUTILS_USE_WORK_DAYS;
+
+        if (empty($use_work_days))
+        {
+            return $time_end - $time_start;
+        }
+
+        $hour_range_string = $conf->global->TICKETUTILS_WORK_HOURS_RANGE;
+        $exclude_days_string = $conf->global->TICKETUTILS_WORK_EXCLUDE_DAYS;
+
+        $hour_range = explode(';', $hour_range_string);
+
+        $hour_start = $hour_range[0] ?? '00:00:00';
+        $hour_end = $hour_range[1] ?? '23:59:59';
+
+        $exclude_days = !empty($exclude_days_string) ? explode(';', $exclude_days_string) : [];
+
+        return SociLibTime::calculate_active_time($time_start, $time_end, $hour_start, $hour_end, $exclude_days);
+    }
+
     public static function get_inactive_tickets()
     {
         /** @var Conf $conf */
@@ -559,21 +585,25 @@ class TicketUtilsLib
 
             $ticket_creation_time = strtotime($ticket->datec);
 
+            $creation_elapsed_time = self::get_elapsed_time($ticket_creation_time, time());
+
             $alert_first_response = false;
             $alert_response_delay = false;
 
             if (!$last_message)
             {
-                $alert_first_response = (time() - $ticket_creation_time) > $DELAY_BEFORE_FIRST_RESPONSE;
+                $alert_first_response = $creation_elapsed_time > $DELAY_BEFORE_FIRST_RESPONSE;
             }
             else
             {
                 $last_message_time = $last_message->datec;
 
-                echo $last_message_time;
+                echo date('Y-m-d H:i:s', $last_message_time);
                 echo '<br>';
 
-                $alert_response_delay = time() - $last_message_time > $DELAY_SINCE_LAST_RESPONSE;
+                $last_message_elapsed_time = self::get_elapsed_time($last_message_time, time());
+
+                $alert_response_delay = $last_message_elapsed_time > $DELAY_SINCE_LAST_RESPONSE;
             }
 
             $ticket->fetchObjectLinked();
@@ -612,11 +642,15 @@ class TicketUtilsLib
                     {
                         $intervention_creation_time = $intervention->datec;
 
-                        $alert_inactive_interventions = time() - $intervention_creation_time > $DELAY_SINCE_LAST_RESPONSE;
+                        $intervention_creation_elapsed_time = self::get_elapsed_time($intervention_creation_time, time());
+
+                        $alert_inactive_interventions = $intervention_creation_elapsed_time > $DELAY_SINCE_LAST_RESPONSE;
                     }
                     else
                     {
-                        $alert_inactive_interventions = time() - $last_observacion_time > $DELAY_SINCE_LAST_RESPONSE;
+                        $last_observacion_elapsed_time = self::get_elapsed_time($last_observacion_time, time());
+
+                        $alert_inactive_interventions = $last_observacion_elapsed_time > $DELAY_SINCE_LAST_RESPONSE;
                     }
 
                     if ($alert_inactive_interventions)
@@ -1352,55 +1386,20 @@ class TicketUtilsLib
      */
     public static function ticket_load_board($user, $mode)
     {
-        // phpcs:enable
         global $conf, $langs, $db;
-
-        $ticket = new Ticket($db);
 
         $now = dol_now();
         $delay_warning = 0;
 
         $can_see_all = $user->rights->ticketutils->ticket->all;
 
-        $ticket->nbtodo = $ticket->nbtodolate = 0;
-
-        $sql = "SELECT p.rowid, p.ref, p.datec as datec, p.date_last_msg_sent";
-        $sql .= " FROM " . MAIN_DB_PREFIX . "ticket as p";
-
-        $sql .= " WHERE p.entity IN (" . getEntity('ticket') . ")";
-        if ($mode == 'opened')
-        {
-            $sql .= " AND p.fk_statut NOT IN (" . Ticket::STATUS_CLOSED . ", " . Ticket::STATUS_CANCELED . ")";
-        }
-        if ($mode == 'waiting')
-        {
-            $sql .= " AND p.fk_statut = " . Ticket::STATUS_NEED_MORE_INFO . "";
-        }
-        if ($user->socid)
-        {
-            $sql .= " AND p.fk_soc = " . ((int) $user->socid);
-        }
-        if (!$can_see_all)
-        {
-            $sql .= " AND (p.fk_user_assign = '" . $user->id . "' OR p.fk_user_create = '" . $user->id . "')";
-        }
-
-        $resql = $db->query($sql);
-
-        if (!$resql)
-        {
-            $ticket->error = $db->lasterror();
-            return -1;
-        }
+        $inactive_tickets = self::get_inactive_tickets();
 
         $label = $labelShort = '';
         $status = '';
 
         $last_response_delay = $conf->global->TICKET_DELAY_SINCE_LAST_RESPONSE;
         $first_response_delay = $conf->global->TICKET_DELAY_BEFORE_FIRST_RESPONSE;
-
-        $last_response_delay_seconds = $last_response_delay * 3600;
-        $first_response_delay_seconds = $first_response_delay * 3600;
 
         if ($mode == 'opened')
         {
@@ -1423,23 +1422,44 @@ class TicketUtilsLib
         $response->url = DOL_URL_ROOT . '/ticket/list.php?search_fk_statut[]=' . $status;
         $response->img = img_object('', "ticket");
 
-        while ($obj = $db->fetch_object($resql))
+        foreach ($inactive_tickets as $ticket_info)
         {
-            $response->nbtodo++;
             if ($mode == 'opened')
             {
-                $ticket_create_time = strtotime($obj->datec);
-
-                $ticket_last_msg_time = $obj->date_last_msg_sent ? strtotime($obj->date_last_msg_sent) : 0;
-
-                $late_first_response = $first_response_delay_seconds > 0 && (!$ticket_last_msg_time && (time() - $ticket_create_time) > $first_response_delay_seconds);
-                $late_last_response = $last_response_delay_seconds > 0 && (time() - $ticket_last_msg_time) > $last_response_delay_seconds;
-
-                if ($late_first_response || $late_last_response)
+                if ($ticket_info['alert_first_response'] || $ticket_info['alert_last_response'] || $ticket_info['alert_inactive_interventions'] || $ticket_info['alert_response_delay'])
                 {
                     $response->nbtodolate++;
                 }
             }
+        }
+
+        $sql = "SELECT COUNT(p.rowid) as nb";
+        $sql .= " FROM " . MAIN_DB_PREFIX . "ticket as p";
+
+        $sql .= " WHERE p.entity IN (" . getEntity('ticket') . ")";
+        if ($mode == 'opened')
+        {
+            $sql .= " AND p.fk_statut NOT IN (" . Ticket::STATUS_CLOSED . ", " . Ticket::STATUS_CANCELED . ")";
+        }
+        if ($mode == 'waiting')
+        {
+            $sql .= " AND p.fk_statut = " . Ticket::STATUS_NEED_MORE_INFO . "";
+        }
+        if ($user->socid)
+        {
+            $sql .= " AND p.fk_soc = " . ((int) $user->socid);
+        }
+        if (!$can_see_all)
+        {
+            $sql .= " AND (p.fk_user_assign = '" . $user->id . "' OR p.fk_user_create = '" . $user->id . "')";
+        }
+
+        $resql = $db->query($sql);
+
+        if ($resql)
+        {
+            $obj = $db->fetch_object($resql);
+            $response->nbtodo = $obj->nb;
         }
 
         return $response;

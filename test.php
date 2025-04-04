@@ -4,9 +4,28 @@ require_once '../../main.inc.php';
 
 require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/lib/ticketutils.lib.php';
 
+require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_strings.class.php';
+require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_time.class.php';
+
 $ticketutils_lib = new TicketUtilsLib();
 
-/* foreach ($inactive_tickets as $ticket_info)
+
+
+// exit();
+
+/* $time = SociLibTime::calculate_active_time(strtotime('2025-03-28 07:00:00'), time(), '07:00:00', '17:00:00', [6, 7]);
+
+echo $time;
+echo '<br>';
+echo $time / 3600;
+echo '<br>';
+
+$time_string = SociLibStrings::get_time_string($time, true, false);
+print_r($time_string); */
+
+$result = $ticketutils_lib->get_inactive_tickets();
+
+foreach ($result as $ticket_info)
 {
     echo $ticket_info['ticket']->ref;
     echo '<br>';
@@ -21,12 +40,4 @@ $ticketutils_lib = new TicketUtilsLib();
     echo '<br>';
 
     echo '<br>';
-} */
-
-// exit();
-
-$result = $ticketutils_lib->close_tickets_awaiting_validation();
-
-echo '<pre>';
-echo print_r(json_decode($ticketutils_lib->output, true));
-echo '</pre>';
+}

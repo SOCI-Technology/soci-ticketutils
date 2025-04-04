@@ -9,6 +9,8 @@ TicketUtilsSetup = Configuración Ticketutils
 ChangeTicketStatus = Cambiar estado del ticket
 ChangeTicketStatusTo = Cambiar estado del ticket a %s
 
+Setting = Configuración
+
 # TicketStatusRead = Leído
 # TicketStatusUnread = No leído
 # TicketStatusAssigned = Asignado
@@ -121,6 +123,9 @@ MenuListTicketWaiting = Esperando aprobación
 SetupRequireChangeStatusNote = Requerir una nota al cambiar el estado del ticket
 SetupTicketMessageShowCharacterCount = Mostrar contador de caracteres en el mensaje del ticket
 SetupInactiveTicketNotification = Enviar notificaciones para tickets inactivos
+SetupUseWorkDays = Contar tiempo en un horario específico
+SetupWorkHoursRange = Rango de horas
+SetupWorkExcludeDays = Excluir días
 SetupHelpRequest = Opción para realizar una solicitud de apoyo a otro usuario
 SetupStatistics = Vista de estadísticas adicionales sobre los tickets
 SetupValidationStatus = Añadir estado "Esperando aprobación" para aprobación de parte del cliente

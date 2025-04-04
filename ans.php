@@ -97,6 +97,61 @@ echo '</tr>';
  */
 
 /**
+ * Use work days
+ */
+echo '<tr>';
+
+echo '<td>';
+echo $langs->trans('SetupUseWorkDays');
+echo '</td>';
+
+echo '<td>';
+echo SociConstField::print('TICKETUTILS_USE_WORK_DAYS', 'boolean', $form_action);
+echo '</td>';
+/**
+ * End use work days
+ */
+
+if ($conf->global->TICKETUTILS_USE_WORK_DAYS)
+{
+    /**
+     * Work hours range
+     */
+    echo '<tr>';
+
+    echo '<td>';
+    echo $langs->trans('SetupWorkHoursRange');
+    echo '</td>';
+
+    echo '<td>';
+    echo SociConstField::print('TICKETUTILS_WORK_HOURS_RANGE', 'text', $form_action);
+    echo '</td>';
+
+    echo '</tr>';
+    /**
+     * End hour range
+     */
+
+    /**
+     * Work exclude days
+     */
+    echo '<tr>';
+
+    echo '<td>';
+    echo $langs->trans('SetupWorkExcludeDays');
+    echo '</td>';
+
+    echo '<td>';
+    echo SociConstField::print('TICKETUTILS_WORK_EXCLUDE_DAYS', 'text', $form_action);
+    echo '</td>';
+
+    echo '</tr>';
+    /**
+     * End hour range
+     */
+}
+
+/**
  * Email notifications from
  */
 echo '<tr>';
