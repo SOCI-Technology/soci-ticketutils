@@ -598,9 +598,6 @@ class TicketUtilsLib
             {
                 $last_message_time = $last_message->datec;
 
-                echo date('Y-m-d H:i:s', $last_message_time);
-                echo '<br>';
-
                 $last_message_elapsed_time = self::get_elapsed_time($last_message_time, time());
 
                 $alert_response_delay = $last_message_elapsed_time > $DELAY_SINCE_LAST_RESPONSE;
