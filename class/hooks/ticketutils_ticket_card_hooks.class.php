@@ -367,4 +367,46 @@ class TicketUtilsTicketCardHooks
             return dolGetButtonAction('', $langs->trans('ReOpen'), 'default', $_SERVER["PHP_SELF"] . '?action=reopen&token=' . newToken() . '&track_id=' . $object->track_id, '');
         }
     }
+
+    public static function change_creation_form()
+    {
+        global $langs;
+
+        $options = [
+            "external",
+            "internal"
+        ];
+
+        $w = '';
+
+        $w .= '<table>';
+
+        $w .= '<tr>';
+
+        $w .= '<td class="fieldrequired">';
+        $w .= $langs->trans('EntryType');
+        $w .= '</td>';
+
+        $w .= '<td>';
+        $w .= '<select name="entry_type" id="entry_type">';
+        foreach ($options as $option)
+        {
+            $w .= '<option value="' . $option . '">';
+            $w .= $langs->trans('EntryType' . ucfirst($option));
+            $w .= '</option>';
+        }
+        $w .= '</select>';
+
+        //$w .= ajax_combobox('entry_type');
+        
+        $w .= '</td>';
+
+        $w .= '</tr>';
+
+        $w .= '</table>';
+
+        $w .= '<script src="'. DOL_URL_ROOT .'/custom/ticketutils/js/change_creation_form.js?time=' . time() . '"></script>';
+
+        return $w;
+    }
 }

@@ -203,9 +203,19 @@ class ActionsTicketUtils
         {
             echo '<link rel="stylesheet" href="' . DOL_URL_ROOT . '/custom/ticketutils/css/ticketutils.css">';
 
-            $print = TicketUtilsTicketCardHooks::add_rating_info($object);
+            if ($action != 'create')
+            {
+                $print = TicketUtilsTicketCardHooks::add_rating_info($object);
+    
+                $this->resprints = $print;
+            }
 
-            $this->resprints = $print;
+            if ($action == 'create')
+            {
+                $print = TicketUtilsTicketCardHooks::change_creation_form();
+
+                echo $print;
+            }
         }
     }
 

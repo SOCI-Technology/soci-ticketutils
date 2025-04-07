@@ -116,6 +116,10 @@ AbandonRequestSent = Solicitud de abandono enviada
 
 MenuListTicketWaiting = Esperando aprobación
 
+EntryType = Tipo de registro
+EntryTypeInternal = Interno
+EntryTypeExternal = Externo
+
 #
 # SETUP
 #
