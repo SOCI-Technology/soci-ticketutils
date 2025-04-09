@@ -337,6 +337,15 @@ class TicketUtilsLib
             $assigned_user->fetch($ticket->fk_user_assign);
 
             $to = $ticket->origin_email;
+
+            if (!$ticket->origin_email)
+            {
+                $user_creator = new User($db);
+                $user_creator->fetch($ticket->fk_user_create);
+
+                $to = $user_creator->email;
+            }
+
             $from = $conf->global->TICKET_NOTIFICATION_EMAIL_FROM;
 
             if (!$to || !$from)
@@ -353,7 +362,18 @@ class TicketUtilsLib
             $msg .= '<br>';
             $msg .= '<br>';
 
-            $msg .= $langs->trans('LinkToTicket') . ': ' . DOL_MAIN_URL_ROOT . '/public/ticket/view.php?track_id=' . $ticket->$id_to_use . '&email=' . $ticket->origin_email;
+            $link = '';
+
+            if (!$ticket->origin_email)
+            {
+                $link = DOL_MAIN_URL_ROOT . '/ticket/card.php?id=' . $ticket->id;
+            }
+            else
+            {
+                $link = DOL_MAIN_URL_ROOT . '/public/ticket/view.php?track_id=' . $ticket->$id_to_use . '&email=' . $ticket->origin_email;
+            }
+
+            $msg .= $langs->trans('LinkToTicket') . ': ' . $link;
 
             $trackid = 'ticket_' . $ticket->id;
 
@@ -902,49 +922,6 @@ class TicketUtilsLib
         $msg .= '<br>';
         $msg .= '<br>';
 
-        /* $msg .= '<ul>';
-        foreach ($tickets as $ticket)
-        {
-            $msg .= '<li>';
-
-            $msg .= '<a href="' . DOL_MAIN_URL_ROOT . '/ticket/card.php?id=' . $ticket->id . '">';
-            $msg .= $ticket->ref;
-            $msg .= '</a>';
-
-            $msg .= '<span>';
-            $msg .= ' - ' . $langs->trans('CreatedAt') . ': ' . $ticket->datec;
-            $msg .= '</span>';
-
-            if ($show_assigned_user)
-            {
-                $assigned_user = new User($db);
-
-                if (isset($found_users[$ticket->fk_user_assign]))
-                {
-                    $assigned_user = $found_users[$ticket->fk_user_assign];
-                }
-                else
-                {
-                    $assigned_user->fetch($ticket->fk_user_assign);
-                }
-
-                $msg .= '<span>';
-                $msg .= ' - ';
-                if ($assigned_user->id > 0)
-                {
-                    $msg .= $langs->trans('AssignedTo') . ': ' . $assigned_user->getFullName($langs);
-                }
-                else
-                {
-                    $msg .= '<b>' . $langs->trans('NotAssigned') . '</b>';
-                }
-                $msg .= '</span>';
-            }
-
-            $msg .= '</li>';
-        }
-        $msg .= '</ul>'; */
-
         $msg .= '<table border="1" style="text-align: center; border-collapse: collapse" cellpadding="5">';
 
         $msg .= '<thead>';
@@ -1460,5 +1437,160 @@ class TicketUtilsLib
         }
 
         return $response;
+    }
+
+    /**
+     * @param Ticket $ticket
+     */
+    public static function accept_modal($ticket, $view = 'public')
+    {
+        global $langs, $conf;
+
+        require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib.class.php';
+
+        $id_to_use = $conf->global->TICKETUTILS_ONLY_ONE_ID ? 'ref' : 'track_id';
+
+        SociLib::load_components([SOCILIB_MODAL]);
+
+        $accept_modal = '';
+
+        $accept_modal .= '<div class="accept-ticket-modal">';
+
+        $accept_modal .= '<span>';
+        $accept_modal .= $langs->trans('AcceptTicketDescription');
+        $accept_modal .= '</span>';
+
+        $accept_modal .= TicketUtilsLib::rating();
+
+        $accept_modal .= '<div style="text-align: center">';
+
+        $accept_modal .= '<b>';
+        $accept_modal .= $langs->trans('Comments') . ':';
+        $accept_modal .= '</b>';
+
+        $accept_modal .= '<br>';
+
+        $accept_modal .= '<textarea name="rating_comment">';
+        $accept_modal .= '</textarea>';
+        $accept_modal .= '</div>';
+
+        $accept_modal .= '<input type="hidden" name="track_id" value="' . $ticket->$id_to_use . '">';
+        $accept_modal .= '<input type="hidden" name="token" value="' . newToken() . '">';
+        $accept_modal .= '<input type="hidden" name="view" value="' . $view . '">';
+
+        $accept_modal .= '</div>';
+
+        $modal_action = DOL_URL_ROOT . '/custom/ticketutils/inc/accept_reject.inc.php';
+
+        $props = new SociModalProps();
+        $props->save_button_label = $langs->trans('Confirm');
+        $props->cancel_button_label = $langs->trans('Cancel');
+
+        $w = '';
+
+        $w .= SociModal::print(
+            'modal_accept',
+            $modal_action,
+            'accept_ticket',
+            $langs->trans('AcceptSolution'),
+            $accept_modal,
+            $props
+        );
+
+        return $w;
+    }
+
+    /**
+     * @param Ticket $ticket
+     */
+    public static function reject_modal($ticket, $view = 'public')
+    {
+        global $langs, $conf;
+
+        require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib.class.php';
+
+        SociLib::load_components([SOCILIB_MODAL]);
+
+        $id_to_use = $conf->global->TICKETUTILS_ONLY_ONE_ID ? 'ref' : 'track_id';
+
+        $reject_modal = '';
+
+        $reject_modal .= '<div class="reject-ticket-modal">';
+
+        $reject_modal .= '<span>';
+        $reject_modal .= $langs->trans('RejectTicketDescription');
+        $reject_modal .= '</span>';
+
+        $reject_modal .= '<div style="text-align: center">';
+
+        $reject_modal .= '<textarea name="message" required>';
+        $reject_modal .= '</textarea>';
+        $reject_modal .= '</div>';
+
+        $reject_modal .= '<input type="hidden" name="track_id" value="' . $ticket->$id_to_use . '">';
+        $reject_modal .= '<input type="hidden" name="token" value="' . newToken() . '">';
+        $reject_modal .= '<input type="hidden" name="view" value="' . $view . '">';
+
+        $reject_modal .= '</div>';
+
+        $modal_action = DOL_URL_ROOT . '/custom/ticketutils/inc/accept_reject.inc.php';
+
+        $props = new SociModalProps();
+        $props->save_button_label = $langs->trans('Confirm');
+        $props->cancel_button_label = $langs->trans('Cancel');
+
+        $w = '';
+
+        $w .= SociModal::print(
+            'modal_reject',
+            $modal_action,
+            'reject_ticket',
+            $langs->trans('RejectSolution'),
+            $reject_modal,
+            $props
+        );
+
+        return $w;
+    }
+
+        /**
+     * @param   Ticket  $ticket 
+     */
+    public static function accept_reject_buttons($ticket, $view = 'public')
+    {
+        global $langs, $user;
+
+        if ($ticket->status != Ticket::STATUS_NEED_MORE_INFO)
+        {
+            return;
+        }
+
+        if (!$ticket->email_from)
+        {
+            if ($ticket->fk_user_create != $user->id)
+            {
+                return;
+            }
+        }
+
+        $w = '';
+
+        $w .= TicketUtilsLib::accept_modal($ticket, $view);
+
+        $w .= TicketUtilsLib::reject_modal($ticket, $view);
+
+        $w .= '<div class="inline-block divButAction toggle-modal" data-modal-id="modal_accept">';
+        $w .= '<a class="butAction accept">';
+        $w .= $langs->trans('AcceptSolution');
+        $w .= '</a>';
+        $w .= '</div>';
+
+        $w .= '<div class="inline-block divButAction">';
+        $w .= '<a class="butAction reject toggle-modal" data-modal-id="modal_reject">';
+        $w .= $langs->trans('RejectSolution');
+        $w .= '</a>';
+        $w .= '</div>';
+
+        return $w;
     }
 }

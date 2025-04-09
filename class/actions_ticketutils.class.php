@@ -91,6 +91,12 @@ class ActionsTicketUtils
 
         global $langs, $user, $conf;
 
+        /* echo '<pre>';
+        print_r($_POST);
+        echo '</pre>';
+        
+        exit(); */
+        
         $param_context = explode(':', $parameters['context']);
 
         if (in_array('ticketcard', $param_context))
@@ -107,6 +113,11 @@ class ActionsTicketUtils
                 if ($action == 'confirm_reopen')
                 {
                     return TicketUtilsTicketCardHooks::replace_reopen_ticket($object);
+                }
+
+                if ($action == 'add' && GETPOST('save'))
+                {
+                    return TicketUtilsTicketCardHooks::replace_create_ticket($object, $action);
                 }
             }
 
@@ -427,6 +438,7 @@ class ActionsTicketUtils
 
         if (in_array('ticketcard', $param_context))
         {
+            echo TicketUtilsTicketCardHooks::accept_reject_buttons($object, 'private');
             echo TicketUtilsTicketCardHooks::button_abandon_request($object);
             echo TicketUtilsTicketCardHooks::button_abandon($object);
             echo TicketUtilsTicketCardHooks::button_reopen_abandon_request($object);

@@ -4,22 +4,25 @@
  * @var DoliDB $db
  */
 
-if (!defined('NOREQUIREMENU'))
+if (empty($_POST['view']) || (isset($_POST['view']) && $_POST['view'] != 'private'))
 {
-    define('NOREQUIREMENU', '1');
-}
-// If there is no need to load and show top and left menu
-if (!defined("NOLOGIN"))
-{
-    define("NOLOGIN", '1');
-}
-if (!defined('NOIPCHECK'))
-{
-    define('NOIPCHECK', '1'); // Do not check IP defined into conf $dolibarr_main_restrict_ip
-}
-if (!defined('NOBROWSERNOTIF'))
-{
-    define('NOBROWSERNOTIF', '1');
+    if (!defined('NOREQUIREMENU'))
+    {
+        define('NOREQUIREMENU', '1');
+    }
+    // If there is no need to load and show top and left menu
+    if (!defined("NOLOGIN"))
+    {
+        define("NOLOGIN", '1');
+    }
+    if (!defined('NOIPCHECK'))
+    {
+        define('NOIPCHECK', '1'); // Do not check IP defined into conf $dolibarr_main_restrict_ip
+    }
+    if (!defined('NOBROWSERNOTIF'))
+    {
+        define('NOBROWSERNOTIF', '1');
+    }
 }
 // If this page is public (can be called outside logged session)
 
@@ -40,6 +43,7 @@ if (GETPOSTISSET('accept_ticket'))
     $rating = GETPOST('rating');
     $rating_comment = GETPOST('rating_comment');
     $token = GETPOST('token');
+    $view = GETPOST('view');
 
     $id_to_use = $conf->global->TICKETUTILS_ONLY_ONE_ID ? 'ref' : 'track_id';
 
@@ -74,7 +78,19 @@ if (GETPOSTISSET('accept_ticket'))
         setEventMessage($langs->trans('TicketRated'), 'mesgs');
     }
 
-    header('Location: ' . DOL_URL_ROOT . '/custom/ticketutils/public/ticket/view.php?track_id=' . $ticket->$id_to_use . '&email=' . $ticket->origin_email . '&token=' . $token . '&action=view_ticket');
+    $back = DOL_URL_ROOT;
+    
+    if ($view == 'public')
+    {
+        $back .= '/custom/ticketutils/public/ticket/view.php?track_id=' . $ticket->$id_to_use . '&email=' . $ticket->origin_email . '&token=' . $token . '&action=view_ticket';
+    }
+    else
+    {
+        $back .= '/ticket/card.php?id=' . $ticket->id;
+    }
+
+
+    header('Location: ' . $back);
 
     exit();
 }
@@ -107,7 +123,7 @@ if (GETPOSTISSET('reject_ticket'))
 
     $prov_user = new User($db);
     $prov_user->id = 0;
-    
+
     $res = TicketUtilsLib::reject_ticket($ticket, $prov_user, $message);
 
     if (!($res > 0))

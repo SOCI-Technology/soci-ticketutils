@@ -363,13 +363,13 @@ if ($action == "view_ticket" || $action == "presend" || $action == "close" || $a
 				for ($i = 1; $i <= 5; $i++)
 				{
 					$active = $i <= $rating ? 'active' : '';
-	
+
 					echo '<i class="fas fa-star rating-item ' . $active . ' static">';
 					echo '</i>';
 				}
 				echo '</div>';
 			}
-			
+
 			echo '</td>';
 
 			echo '</tr>';
@@ -512,82 +512,6 @@ if ($action == "view_ticket" || $action == "presend" || $action == "close" || $a
 
 			if ($ticket->status < Ticket::STATUS_CLOSED)
 			{
-				$accept_modal = '';
-
-				$accept_modal .= '<div class="accept-ticket-modal">';
-
-				$accept_modal .= '<span>';
-				$accept_modal .= $langs->trans('AcceptTicketDescription');
-				$accept_modal .= '</span>';
-
-				$accept_modal .= TicketUtilsLib::rating();
-
-				$accept_modal .= '<div style="text-align: center">';
-
-				$accept_modal .= '<b>';
-				$accept_modal .= $langs->trans('Comments') . ':';
-				$accept_modal .= '</b>';
-
-				$accept_modal .= '<br>';
-
-				$accept_modal .= '<textarea name="rating_comment">';
-				$accept_modal .= '</textarea>';
-				$accept_modal .= '</div>';
-
-				$accept_modal .= '<input type="hidden" name="track_id" value="' . $ticket->$id_to_use . '">';
-				$accept_modal .= '<input type="hidden" name="token" value="' . newToken() . '">';
-
-				$accept_modal .= '</div>';
-
-				$modal_action = DOL_URL_ROOT . '/custom/ticketutils/inc/public_ticket_view.inc.php';
-
-				$props = new SociModalProps();
-				$props->save_button_label = $langs->trans('Confirm');
-				$props->cancel_button_label = $langs->trans('Cancel');
-
-				echo SociModal::print(
-					'modal_accept',
-					$modal_action,
-					'accept_ticket',
-					$langs->trans('AcceptSolution'),
-					$accept_modal,
-					$props
-				);
-
-				$reject_modal = '';
-
-				$reject_modal .= '<div class="reject-ticket-modal">';
-
-				$reject_modal .= '<span>';
-				$reject_modal .= $langs->trans('RejectTicketDescription');
-				$reject_modal .= '</span>';
-
-				$reject_modal .= '<div style="text-align: center">';
-
-				$reject_modal .= '<textarea name="message" required>';
-				$reject_modal .= '</textarea>';
-				$reject_modal .= '</div>';
-
-				$reject_modal .= '<input type="hidden" name="track_id" value="' . $ticket->$id_to_use . '">';
-				$reject_modal .= '<input type="hidden" name="token" value="' . newToken() . '">';
-
-				$reject_modal .= '</div>';
-
-				$modal_action = DOL_URL_ROOT . '/custom/ticketutils/inc/public_ticket_view.inc.php';
-
-				$props = new SociModalProps();
-				$props->save_button_label = $langs->trans('Confirm');
-				$props->cancel_button_label = $langs->trans('Cancel');
-
-				echo SociModal::print(
-					'modal_reject',
-					$modal_action,
-					'reject_ticket',
-					$langs->trans('RejectSolution'),
-					$reject_modal,
-					$props
-				);
-
 				// New message
 				echo '<div class="inline-block divButAction">';
 				echo '<a  class="butAction" href="' . $_SERVER['PHP_SELF'] . '?action=presend&mode=init&track_id=' . $object->dao->$id_to_use . (!empty($entity) && isModEnabled('multicompany') ? '&entity=' . $entity : '') . '&token=' . newToken() . '">';
@@ -598,20 +522,7 @@ if ($action == "view_ticket" || $action == "presend" || $action == "close" || $a
 				// Close ticket
 				if ($conf->global->TICKETUTILS_VALIDATION_STATUS)
 				{
-					if ($ticket->status == Ticket::STATUS_NEED_MORE_INFO)
-					{
-						echo '<div class="inline-block divButAction toggle-modal" data-modal-id="modal_accept">';
-						echo '<a class="butAction accept">';
-						echo $langs->trans('AcceptSolution');
-						echo '</a>';
-						echo '</div>';
-
-						echo '<div class="inline-block divButAction">';
-						echo '<a class="butAction reject toggle-modal" data-modal-id="modal_reject">';
-						echo $langs->trans('RejectSolution');
-						echo '</a>';
-						echo '</div>';
-					}
+					echo TicketUtilsLib::accept_reject_buttons($ticket);
 				}
 				else
 				{

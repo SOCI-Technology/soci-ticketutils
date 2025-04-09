@@ -120,6 +120,8 @@ EntryType = Tipo de registro
 EntryTypeInternal = Interno
 EntryTypeExternal = Externo
 
+CreationDate = Fecha de creación
+
 #
 # SETUP
 #

@@ -398,14 +398,263 @@ class TicketUtilsTicketCardHooks
         $w .= '</select>';
 
         //$w .= ajax_combobox('entry_type');
-        
+
         $w .= '</td>';
 
         $w .= '</tr>';
 
         $w .= '</table>';
 
-        $w .= '<script src="'. DOL_URL_ROOT .'/custom/ticketutils/js/change_creation_form.js?time=' . time() . '"></script>';
+        $w .= '<script src="' . DOL_URL_ROOT . '/custom/ticketutils/js/change_creation_form.js?time=' . time() . '"></script>';
+
+        return $w;
+    }
+
+    /**
+     * @param   Ticket  $object
+     * @param   string  $action
+     */
+    public static function replace_create_ticket(&$object, &$action)
+    {
+        global $user, $langs, $extrafields, $db, $conf;
+        /**
+         * @var DoliDB $db
+         */
+
+        $permissiontoadd = $user->hasRight('ticket', 'write');
+
+        if (!$permissiontoadd)
+        {
+            return 1;
+        }
+
+        $projectid = GETPOST('projectid', 'int');
+
+        $error = 0;
+
+        if (!GETPOST("type_code", 'alpha'))
+        {
+            $error++;
+            setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentities("TicketTypeRequest")), null, 'errors');
+            $action = 'create';
+        }
+        elseif (!GETPOST("category_code", 'alpha'))
+        {
+            $error++;
+            setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentities("TicketCategory")), null, 'errors');
+            $action = 'create';
+        }
+        elseif (!GETPOST("severity_code", 'alpha'))
+        {
+            $error++;
+            setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentities("TicketSeverity")), null, 'errors');
+            $action = 'create';
+        }
+        elseif (!GETPOST("subject", 'alphanohtml'))
+        {
+            $error++;
+            setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentities("Subject")), null, 'errors');
+            $action = 'create';
+        }
+        elseif (!GETPOST("message", 'restricthtml'))
+        {
+            $error++;
+            setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentities("Message")), null, 'errors');
+            $action = 'create';
+        }
+        $ret = $extrafields->setOptionalsFromPost(null, $object);
+        if ($ret < 0)
+        {
+            $error++;
+        }
+
+        if ($error)
+        {
+            setEventMessages($object->error, $object->errors, 'errors');
+            $action = 'create';
+            return 1;
+        }
+
+        $db->begin();
+
+        $getRef = GETPOST("ref", 'alphanohtml');
+        if ($object->fetch('', $getRef) > 0)
+        {
+            $object->ref = $object->getDefaultRef();
+            $object->track_id = null;
+            setEventMessage($langs->trans('TicketRefAlreadyUsed', $getRef, $object->ref));
+        }
+        else
+        {
+            $object->ref = $getRef;
+        }
+
+        $object->fk_soc = GETPOST("socid", 'int') > 0 ? GETPOST("socid", 'int') : 0;
+        $object->subject = GETPOST("subject", 'alphanohtml');
+        $object->message = GETPOST("message", 'restricthtml');
+
+        $object->type_code = GETPOST("type_code", 'alpha');
+        $object->type_label = $langs->trans($langs->getLabelFromKey($db, $object->type_code, 'c_ticket_type', 'code', 'label'));
+        $object->category_code = GETPOST("category_code", 'alpha');
+        $object->category_label = $langs->trans($langs->getLabelFromKey($db, $object->category_code, 'c_ticket_category', 'code', 'label'));
+        $object->severity_code = GETPOST("severity_code", 'alpha');
+        $object->severity_label = $langs->trans($langs->getLabelFromKey($db, $object->severity_code, 'c_ticket_severity', 'code', 'label'));
+        $object->email_from = $user->email;
+        $notifyTiers = GETPOST("notify_tiers_at_create", 'alpha');
+        $object->notify_tiers_at_create = empty($notifyTiers) ? 0 : 1;
+
+        $object->fk_project = $projectid;
+
+        $id = $object->create($user);
+
+        if ($id <= 0)
+        {
+            $error++;
+            setEventMessages($object->error, $object->errors, 'errors');
+            $action = 'create';
+            return 1;
+        }
+
+        if ($error)
+        {
+            setEventMessages($object->error, $object->errors, 'errors');
+            $action = 'create';
+            return 1;
+        }
+
+
+        // Add contact
+        $contactid = GETPOST('contactid', 'int');
+        $type_contact = GETPOST("type", 'alpha');
+
+        // Category association
+        $categories = GETPOST('categories', 'array');
+        $object->setCategories($categories);
+
+        if ($contactid > 0 && $type_contact)
+        {
+            $typeid = (GETPOST('typecontact') ? GETPOST('typecontact') : GETPOST('type'));
+            $result = $object->add_contact($contactid, $typeid, 'external');
+        }
+
+        // Link ticket to project
+        if (GETPOST('origin', 'alpha') == 'projet')
+        {
+            $projectid = GETPOST('originid', 'int');
+        }
+        else
+        {
+            $projectid = GETPOST('projectid', 'int');
+        }
+
+        if ($projectid > 0)
+        {
+            $object->setProject($projectid);
+        }
+
+        // Auto mark as read if created from backend
+        if (!empty($conf->global->TICKET_AUTO_READ_WHEN_CREATED_FROM_BACKEND) && $user->rights->ticket->write)
+        {
+            if (! $object->markAsRead($user) > 0)
+            {
+                setEventMessages($object->error, $object->errors, 'errors');
+            }
+        }
+
+        // Auto assign user
+        /* if (!empty($conf->global->TICKET_AUTO_ASSIGN_USER_CREATE))
+        {
+            $result = $object->assignUser($user, $user->id, 1);
+            $object->add_contact($user->id, "SUPPORTTEC", 'internal');
+        } */
+
+        $fk_user_assign = GETPOST("fk_user_assign", 'int');
+        if ($fk_user_assign > 0)
+        {
+            if ($conf->global->TICKETUTILS_ALTER_STATUS_LOGIC)
+            {
+                $res = TicketUtilsLib::replace_ticket_assign_user($object, $user, $fk_user_assign);
+            }
+            else
+            {
+                $res = $object->assignUser($user, $fk_user_assign);
+            }
+
+            if (!($res > 0))
+            {
+                $error++;
+            }
+        }
+
+        if ($error)
+        {
+            $db->rollback();
+            setEventMessages($object->error, $object->errors, 'errors');
+            $action = 'create';
+            return 1;
+        }
+
+        $object->copyFilesForTicket('');        // trackid is forced to '' because files were uploaded when no id for ticket exists yet and trackid was ''
+
+        $db->commit();
+
+        if (!empty($backtopage))
+        {
+            if (empty($id))
+            {
+                $url = $backtopage;
+            }
+            else
+            {
+                $url = 'card.php?track_id=' . urlencode($object->track_id);
+            }
+        }
+        else
+        {
+            $url = 'card.php?track_id=' . urlencode($object->track_id);
+        }
+
+        header("Location: " . $url);
+        exit;
+    }
+
+    /**
+     * @param   Ticket  $ticket 
+     */
+    public static function accept_reject_buttons($ticket, $view = 'public')
+    {
+        global $langs, $user;
+
+        if ($ticket->status != Ticket::STATUS_NEED_MORE_INFO)
+        {
+            return;
+        }
+
+        if (!$ticket->email_from)
+        {
+            if ($ticket->fk_user_create != $user->id)
+            {
+                return;
+            }
+        }
+
+        $w = '';
+
+        $w .= TicketUtilsLib::accept_modal($ticket, $view);
+
+        $w .= TicketUtilsLib::reject_modal($ticket, $view);
+
+        $w .= '<div class="inline-block divButAction toggle-modal" data-modal-id="modal_accept">';
+        $w .= '<a class="butAction accept">';
+        $w .= $langs->trans('AcceptSolution');
+        $w .= '</a>';
+        $w .= '</div>';
+
+        $w .= '<div class="inline-block divButAction">';
+        $w .= '<a class="butAction reject toggle-modal" data-modal-id="modal_reject">';
+        $w .= $langs->trans('RejectSolution');
+        $w .= '</a>';
+        $w .= '</div>';
 
         return $w;
     }

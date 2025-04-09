@@ -458,7 +458,7 @@ class TicketExtrafields
         $this->db->begin();
 
         $prov_user = new User($this->db);
-        $prov_user->id = 0;
+        $prov_user->id = $ticket->fk_user_create ? $ticket->fk_user_create : 0;
 
         if ($this->id > 0)
         {
@@ -503,7 +503,7 @@ class TicketExtrafields
             $message .= '<br>';
 
             $message .= '<b>' . $langs->transnoentitiesnoconv('Rating') . ':</b> ' . $rating . '/5';
-            
+
             if ($rating_comment)
             {
                 $message .= '<br>';
@@ -512,7 +512,7 @@ class TicketExtrafields
 
             $message .= '<br>';
             $message .= '<br>';
-            
+
             $message .= $langs->transnoentitiesnoconv('LinkToTicket') . ': ' . DOL_MAIN_URL_ROOT . '/ticket/card.php?id=' . $ticket->id;
 
             $mail = new CMailFile(

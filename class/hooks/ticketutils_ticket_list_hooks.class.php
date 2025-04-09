@@ -83,22 +83,18 @@ class TicketUtilsTicketListHooks
 
     public static function add_list_title()
     {
-        global $langs, $arrayfields;
+        global $langs, $arrayfields, $param, $sortfield, $sortorder;
 
         $w = '';
 
         if ($arrayfields['tte.rating']['checked'])
         {
-            $w .= '<th>';
-            $w .= $langs->trans('Rating');
-            $w .= '</th>';
+            $w .= getTitleFieldOfList('Rating', 0, $_SERVER['PHP_SELF'], 'tte.rating', '', $param, '', $sortfield, $sortorder, '', 0, '') . "\n";
         }
 
         if ($arrayfields['tte.rating_comment']['checked'])
         {
-            $w .= '<th>';
-            $w .= $langs->trans('Comments');
-            $w .= '</th>';
+            $w .= getTitleFieldOfList('Comments', 0, $_SERVER['PHP_SELF'], 'tte.rating_comment', '', $param, '', $sortfield, $sortorder, '', 0, '') . "\n";
         }
 
         return $w;
@@ -137,7 +133,7 @@ class TicketUtilsTicketListHooks
         if ($arrayfields['tte.rating']['checked'])
         {
             $w .= '<td>';
-            $w .= $rating;
+            $w .= round($rating);
             $w .= '</td>';
         }
 
