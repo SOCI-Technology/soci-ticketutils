@@ -36,8 +36,9 @@ if (!defined('NOBROWSERNOTIF'))
 
 include_once '../../../main.inc.php';
 
-$email = GETPOST('email', 'custom', 0, FILTER_VALIDATE_EMAIL);
+require_once DOL_DOCUMENT_ROOT . '/contact/class/contact.class.php';
 
+$email = GETPOST('email', 'custom', 0, FILTER_VALIDATE_EMAIL);
 
 if (!isModEnabled('ticket'))
 {
@@ -53,10 +54,82 @@ require_once DOL_DOCUMENT_ROOT . '/ticket/class/ticket.class.php';
 
 require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
 
+function search_contacts_by_email($email)
+{
+    global $db;
+
+    if (!$email)
+    {
+        return [];
+    }
+    
+    $sql = "";
+
+    $sql .= "SELECT rowid FROM " . MAIN_DB_PREFIX . "socpeople";
+    $sql .= " WHERE email = '" . $db->escape($email) . "'";
+
+    $resql = $db->query($sql);
+
+    if (!$resql)
+    {
+        return [];
+    }
+
+    $contacts = [];
+    
+    for ($i = 0; $i < $db->num_rows($resql); $i++)
+    {
+        $obj = $db->fetch_object($resql);
+
+        $contact = new Contact($db);
+        $contact->fetch($obj->rowid);
+
+        $contacts[] = $contact;
+    }
+
+    return $contacts;
+}
+
+function search_thirdparties_by_email($email)
+{
+    global $db;
+        
+    if (!$email)
+    {
+        return [];
+    }
+    
+    $sql = "";
+
+    $sql .= "SELECT rowid FROM " . MAIN_DB_PREFIX . "societe";
+    $sql .= " WHERE email = '" . $db->escape($email) . "'";
+
+    $resql = $db->query($sql);
+
+    if (!$resql)
+    {
+        return [];
+    }
+
+    $thirdparties = [];
+    
+    for ($i = 0; $i < $db->num_rows($resql); $i++)
+    {
+        $obj = $db->fetch_object($resql);
+
+        $thirdparty = new Societe($db);
+        $thirdparty->fetch($obj->rowid);
+
+        $thirdparties[] = $thirdparty;
+    }
+
+    return $thirdparties;
+}
+
 $ticket = new Ticket($db);
 /** @var Contact[] */
-$contact_list = $ticket->searchContactByEmail($email);
-$thirdparty_list = $ticket->searchSocidByEmail($origin_email, '0');
+$contact_list = search_contacts_by_email($email);
+$thirdparty_list = search_thirdparties_by_email($email);
 
 if (!is_array($contact_list))
 {
