@@ -11,13 +11,6 @@ require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/lib/ticketutils.lib.php';
 
 require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_strings.class.php';
 
-if ($user->rights->debugbar->read)
-{
-    //ini_set('display_errors', '1');
-    //ini_set('display_startup_errors', '1');
-    //error_reporting(E_ALL);
-}
-
 class ActionsTicketUtils
 {
 

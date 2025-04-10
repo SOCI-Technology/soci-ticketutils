@@ -124,6 +124,7 @@ t.fk_user_assign as t_fk_user_assign,
 f.rowid as f_rowid,
 f.ref as f_ref,
 obs.rowid as obs_rowid,
+obs.fk_user_creat as obs_fk_user_creat,
 obs.duracion as obs_duracion
 FROM llx_element_element as ee
 
@@ -208,12 +209,12 @@ for ($i = 0; $i < $db->num_rows($work_time_resql); $i++)
 {
     $row = $db->fetch_object($work_time_resql);
 
-    if (!isset($user_work_time[$row->t_fk_user_assign]))
+    if (!isset($user_work_time[$row->obs_fk_user_creat]))
     {
-        $user_work_time[$row->t_fk_user_assign] = 0;
+        $user_work_time[$row->obs_fk_user_creat] = 0;
     }
 
-    $user_work_time[$row->t_fk_user_assign] += $row->obs_duracion;
+    $user_work_time[$row->obs_fk_user_creat] += $row->obs_duracion;
 }
 
 $user_stat_list = [];
