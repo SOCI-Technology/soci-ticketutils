@@ -259,7 +259,7 @@ class TicketUtilsTicketCardHooks
         {
             case $langs->trans('ReOpen'):
                 {
-                    if (!$user->rights->ticketutils->ticket->reopen)
+                    if (empty($user->rights->ticketutils->ticket->reopen))
                     {
                         return 1;
                     }
@@ -272,7 +272,7 @@ class TicketUtilsTicketCardHooks
                 }
             case $langs->trans('AbandonTicket'):
                 {
-                    if (!$user->rights->ticketutils->ticket->abandon)
+                    if (empty($user->rights->ticketutils->ticket->abandon))
                     {
                         return 1;
                     }
@@ -289,7 +289,7 @@ class TicketUtilsTicketCardHooks
     {
         global $user, $langs;
 
-        if ($user->rights->ticketutils->ticket->abandon)
+        if (!empty($user->rights->ticketutils->ticket->abandon))
         {
             return;
         }
@@ -348,7 +348,7 @@ class TicketUtilsTicketCardHooks
         global $langs, $user;
 
         // Abadon ticket if statut is read
-        if (isset($object->status) && $object->status == TicketUtilsLib::TICKET_STATUS_ABANDON_REQUEST && $user->rights->ticketutils->ticket->abandon)
+        if (isset($object->status) && $object->status == TicketUtilsLib::TICKET_STATUS_ABANDON_REQUEST && !empty($user->rights->ticketutils->ticket->abandon))
         {
             return dolGetButtonAction('', $langs->trans('AbandonTicket'), 'default', $_SERVER["PHP_SELF"] . '?action=abandon&token=' . newToken() . '&track_id=' . $object->track_id, '');
         }

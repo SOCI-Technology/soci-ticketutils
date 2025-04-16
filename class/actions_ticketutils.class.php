@@ -182,7 +182,7 @@ class ActionsTicketUtils
         {
             global $user, $mode;
 
-            if ($user->rights->ticketutils->ticket->all)
+            if (!empty($user->rights->ticketutils->ticket->all))
             {
                 return;
             }
@@ -377,7 +377,7 @@ class ActionsTicketUtils
 
         $new_menu = [];
 
-        $can_see_all_tickets = $user->rights->ticketutils->ticket->all;
+        $can_see_all_tickets = !empty($user->rights->ticketutils->ticket->all);
 
         /* echo '<pre>';
         print_r($object);
@@ -473,7 +473,7 @@ class ActionsTicketUtils
             /** @var Ticket */
             $ticket = $sent_object;
 
-            if ($user->rights->ticketutils->ticket->all)
+            if (!empty($user->rights->ticketutils->ticket->all))
             {
                 return 0;
             }

@@ -1365,7 +1365,7 @@ class TicketUtilsLib
         $now = dol_now();
         $delay_warning = 0;
 
-        $can_see_all = $user->rights->ticketutils->ticket->all;
+        $can_see_all = !empty($user->rights->ticketutils->ticket->all);
 
         $inactive_tickets = self::get_inactive_tickets();
 
@@ -1400,7 +1400,7 @@ class TicketUtilsLib
         {
             if ($mode == 'opened')
             {
-                if ($ticket_info['alert_first_response'] || $ticket_info['alert_last_response'] || $ticket_info['alert_inactive_interventions'] || $ticket_info['alert_response_delay'])
+                if ($ticket_info['alert_first_response'] || $ticket_info['alert_inactive_interventions'] || $ticket_info['alert_response_delay'])
                 {
                     $response->nbtodolate++;
                 }

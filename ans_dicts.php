@@ -123,7 +123,7 @@ if ($id == 17 && $user->hasRight('accounting', 'chartofaccount'))
 	$allowed = 1; // Dictionary with type of expense report and accounting account allowed to manager of chart account
 }
 
-if ($user->rights->ticketutils->ans->write)
+if (!empty($user->rights->ticketutils->ans->write))
 {
 	$allowed = 1;
 }
