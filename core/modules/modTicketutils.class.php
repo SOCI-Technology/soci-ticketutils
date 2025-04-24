@@ -2,9 +2,6 @@
 // Include Dolibarr environment
 include_once(DOL_DOCUMENT_ROOT . "/core/modules/DolibarrModules.class.php");
 
-include_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/class/wty_cv.class.php';
-include_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/class/wty_warranty.class.php';
-
 /**
  * @class modWarranty
  * @brief Descripcion del modulo de garantias
