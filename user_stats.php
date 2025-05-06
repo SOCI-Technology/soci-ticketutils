@@ -79,11 +79,15 @@ foreach ($ticket_example->fields as $field => $field_info)
     $sql .= ", t." . $field . ' as t_' . $field;
 }
 
-$sql .= " FROM " . MAIN_DB_PREFIX . "user as u";
+//$sql .= " FROM " . MAIN_DB_PREFIX . "user as u";
+$sql .= " FROM " . MAIN_DB_PREFIX . "ticket as t";
 
-$sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "ticket as t ON t.fk_user_assign = u.rowid";
+//$sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "ticket as t ON t.fk_user_assign = u.rowid";
+$sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "user as u ON t.fk_user_assign = u.rowid";
 
-$sql .= " WHERE t.fk_user_assign > 0";
+$sql .= " WHERE 1 = 1";
+
+$sql .= " AND t.fk_user_assign > 0";
 
 if ($date_start)
 {
@@ -117,15 +121,25 @@ $sql = "SELECT
 ee.fk_source as fk_source,
 ee.sourcetype as sourcetype,
 ee.fk_target as fk_target,
-ee.targettype as targettype,
-t.rowid as t_rowid,
-t.ref as t_ref,
-t.fk_user_assign as t_fk_user_assign,
-f.rowid as f_rowid,
+ee.targettype as targettype";
+
+foreach ($ticket_example->fields as $field => $field_info)
+{
+    $sql .= ", t." . $field . ' as t_' . $field;
+}
+
+$sql .= "
+,f.rowid as f_rowid,
 f.ref as f_ref,
 obs.rowid as obs_rowid,
 obs.fk_user_creat as obs_fk_user_creat,
-obs.duracion as obs_duracion
+obs.duracion as obs_duracion";
+
+foreach ($user->fields as $field => $field_info)
+{
+    $sql .= ", u." . $field . ' as u_' . $field;
+}
+$sql .= "
 FROM llx_element_element as ee
 
 INNER JOIN llx_ticket as t
@@ -143,9 +157,13 @@ END
 LEFT JOIN llx_observacion as obs
 ON obs.fk_intervention = f.rowid
 
+LEFT JOIN llx_user as u
+ON u.rowid = obs.fk_user_creat
+
 WHERE ((ee.sourcetype = 'ticket' AND ee.targettype = 'fichinter')
 OR (ee.sourcetype = 'fichinter' AND ee.targettype = 'ticket'))
-AND t.fk_user_assign > 0";
+";
+//AND t.fk_user_assign > 0";
 
 $work_time_resql = $db->query($sql);
 /**
@@ -191,7 +209,8 @@ for ($i = 0; $i < $db->num_rows($ticket_resql); $i++)
     {
         $user_tickets[$row_user->id] = [
             'user' => $row_user,
-            'tickets' => []
+            'tickets' => [],
+            'all_tickets' => [],
         ];
     }
 
@@ -200,7 +219,8 @@ for ($i = 0; $i < $db->num_rows($ticket_resql); $i++)
         continue;
     }
 
-    $user_tickets[$row_user->id]['tickets'][] = $ticket;
+    $user_tickets[$row_user->id]['tickets'][$ticket->id] = $ticket;
+    $user_tickets[$row_user->id]['all_tickets'][$ticket->id] = $ticket;
 }
 
 $user_work_time = [];
@@ -209,12 +229,51 @@ for ($i = 0; $i < $db->num_rows($work_time_resql); $i++)
 {
     $row = $db->fetch_object($work_time_resql);
 
+    $row_user = new User($db);
+    $ticket = new Ticket($db);
+
+    foreach ($row_user->fields as $field => $field_info)
+    {
+        $field_name = "u_" . $field;
+
+        if ($field == 'rowid')
+        {
+            $row_user->id = $row->$field_name;
+            continue;
+        }
+
+        $row_user->$field = $row->$field_name;
+    }
+
+    foreach ($ticket->fields as $field => $field_info)
+    {
+        $field_name = "t_" . $field;
+
+        if ($field == 'rowid')
+        {
+            $ticket->id = $row->$field_name;
+            continue;
+        }
+
+        $ticket->$field = $row->$field_name;
+    }
+
     if (!isset($user_work_time[$row->obs_fk_user_creat]))
     {
         $user_work_time[$row->obs_fk_user_creat] = 0;
     }
 
+    if (!isset($user_tickets[$row->obs_fk_user_creat]))
+    {
+        $user_tickets[$row->obs_fk_user_creat] = [
+            'user' => $row_user,
+            'tickets' => []
+        ];
+    }
+
     $user_work_time[$row->obs_fk_user_creat] += $row->obs_duracion;
+
+    $user_tickets[$row->obs_fk_user_creat]['all_tickets'][$ticket->id] = $ticket;
 }
 
 $user_stat_list = [];
@@ -234,8 +293,10 @@ foreach ($user_tickets as $user_id => $user_tickets_info)
 {
     $current_user = $user_tickets_info['user'];
     $ticket_list = $user_tickets_info['tickets'];
+    $all_ticket_list = $user_tickets_info['all_tickets'];
 
     $total_tickets = count($ticket_list);
+    $all_total_tickets = count($all_ticket_list);
     $total_tickets_closed = 0;
     $total_tickets_abandoned = 0;
     $total_tickets_open = 0;
@@ -246,17 +307,6 @@ foreach ($user_tickets as $user_id => $user_tickets_info)
     foreach ($ticket_list as $ticket)
     {
         $ticket->fetchObjectLinked();
-
-        $work_time = 0;
-
-        $interventions = $object->linkedObjects['fichinter'] ?? [];
-
-        foreach ($interventions as $fichinter)
-        {
-            $work_time += $fichinter->duration;
-        }
-
-        $total_work_time += $work_time;
 
         if (in_array($ticket->fk_statut, [Ticket::STATUS_CLOSED]))
         {
@@ -278,9 +328,19 @@ foreach ($user_tickets as $user_id => $user_tickets_info)
 
         $total_tickets_open++;
     }
-
+    
+    echo '<br>';
+    echo $current_user->id;
+    echo '<br>';
+    echo $total_work_time;
+    echo '<br>';
+    echo $total_tickets;
+    echo '<br>';
+    echo $all_total_tickets;
+    echo '<br>';
+    
     $avg_close_time = $total_tickets_closed > 0 ? $total_close_time / $total_tickets_closed : 0;
-    $avg_work_time = $total_tickets > 0 ? $total_work_time / $total_tickets : 0;
+    $avg_work_time = $all_total_tickets > 0 ? $total_work_time / $all_total_tickets : 0;
 
     $user_stat_list[$user_id] = [
         'user' => $current_user,
@@ -307,7 +367,7 @@ $totals['avg_work_time'] = $totals['total_tickets'] > 0 ? $totals['total_work_ti
 
 $headers = [
     'user' => $langs->trans('User'),
-    'total_tickets' => $langs->trans('TotalTickets'),
+    'total_tickets' => $langs->trans('TotalTicketsAssigned'),
     'total_tickets_open' => $langs->trans('TotalTicketsOpen'),
     'total_tickets_closed' => $langs->trans('TotalTicketsClosed'),
     'total_tickets_abandoned' => $langs->trans('TotalTicketsAbandoned'),
@@ -511,7 +571,7 @@ foreach ($user_stat_list as $user_stats)
 {
     $current_user = $user_stats['user'];
 
-    $tickets = $user_tickets[$current_user->id]['tickets'];
+    $tickets = $user_tickets[$current_user->id]['all_tickets'];
 
     /** @var Ticket|null */
     $last_ticket = null;
