@@ -251,7 +251,7 @@ class TicketUtilsTicketCardHooks
      */
     public static function hide_buttons($ticket, $button_parameters)
     {
-        global $user, $langs;
+        global $user, $langs, $conf;
 
         $content = $button_parameters['html'];
 
@@ -268,7 +268,10 @@ class TicketUtilsTicketCardHooks
                 }
             case $langs->trans('CloseTicket'):
                 {
-                    return 1;
+                    if (!empty($conf->global->TICKETUTILS_VALIDATION_STATUS))
+                    {
+                        return 1;
+                    }
                 }
             case $langs->trans('AbandonTicket'):
                 {
