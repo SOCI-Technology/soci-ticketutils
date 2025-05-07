@@ -89,7 +89,7 @@ class ActionsTicketUtils
         echo '</pre>';
         
         exit(); */
-        
+
         $param_context = explode(':', $parameters['context']);
 
         if (in_array('ticketcard', $param_context))
@@ -210,7 +210,7 @@ class ActionsTicketUtils
             if ($action != 'create')
             {
                 $print = TicketUtilsTicketCardHooks::add_rating_info($object);
-    
+
                 $this->resprints = $print;
             }
 
@@ -383,6 +383,8 @@ class ActionsTicketUtils
         print_r($object);
         echo '</pre>'; */
 
+        $menu_changed = false;
+
         foreach ($object as &$menu)
         {
             if (!$can_see_all_tickets)
@@ -404,6 +406,7 @@ class ActionsTicketUtils
 
             if ($is_statistics)
             {
+                $menu_changed = true;
                 $new_menu[] = [
                     'fk_menu' => 'fk_mainmenu=ticket,fk_leftmenu=ticket_stats',
                     'url' => '/custom/ticketutils/user_stats.php',
@@ -418,6 +421,11 @@ class ActionsTicketUtils
                     'prefix' => '',
                 ];
             }
+        }
+
+        if (!$menu_changed)
+        {
+            return 0;
         }
 
         $this->results = $new_menu;
