@@ -329,21 +329,12 @@ foreach ($user_tickets as $user_id => $user_tickets_info)
         $total_tickets_open++;
     }
     
-    echo '<br>';
-    echo $current_user->id;
-    echo '<br>';
-    echo $total_work_time;
-    echo '<br>';
-    echo $total_tickets;
-    echo '<br>';
-    echo $all_total_tickets;
-    echo '<br>';
-    
     $avg_close_time = $total_tickets_closed > 0 ? $total_close_time / $total_tickets_closed : 0;
     $avg_work_time = $all_total_tickets > 0 ? $total_work_time / $all_total_tickets : 0;
 
     $user_stat_list[$user_id] = [
         'user' => $current_user,
+        'all_total_tickets' => $all_total_tickets,
         'total_tickets' => $total_tickets,
         'total_tickets_closed' => $total_tickets_closed,
         'total_tickets_abandoned' => $total_tickets_abandoned,
@@ -367,6 +358,7 @@ $totals['avg_work_time'] = $totals['total_tickets'] > 0 ? $totals['total_work_ti
 
 $headers = [
     'user' => $langs->trans('User'),
+    'all_total_tickets' => $langs->trans('TotalTicketsLinked'),
     'total_tickets' => $langs->trans('TotalTicketsAssigned'),
     'total_tickets_open' => $langs->trans('TotalTicketsOpen'),
     'total_tickets_closed' => $langs->trans('TotalTicketsClosed'),
@@ -418,7 +410,7 @@ echo '</th>';
  * END Date range
  */
 
-echo '<th colspan="5">';
+echo '<th colspan="6">';
 
 echo '<i class="fas fa-user paddingright"></i>';
 
@@ -531,6 +523,9 @@ echo '</td>';
 echo '<td>';
 echo '</td>';
 
+echo '<td>';
+echo '</td>';
+
 echo '</tr>';
 #endregion
 /**
@@ -591,6 +586,10 @@ foreach ($user_stat_list as $user_stats)
     echo '<tr>';
     echo '<td>';
     echo $current_user->getNomUrl(-1);
+    echo '</td>';
+
+    echo '<td>';
+    echo $user_stats['all_total_tickets'];
     echo '</td>';
 
     echo '<td>';

@@ -95,6 +95,7 @@ NoRating = Sin calificación
 Validation = Validación
 
 TicketUserStats = Estadísticas de tickets por usuario
+TotalTicketsLinked = Tickets relacionados
 TotalTicketsAssigned = Total tickets asignados
 TotalTicketsOpen = Tickets abiertos
 TotalTicketsClosed = Tickets cerrados
