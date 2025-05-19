@@ -1553,7 +1553,7 @@ class TicketUtilsLib
         return $w;
     }
 
-        /**
+    /**
      * @param   Ticket  $ticket 
      */
     public static function accept_reject_buttons($ticket, $view = 'public')

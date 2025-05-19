@@ -146,6 +146,12 @@ class ActionsTicketUtils
                     return $res;
                 }
             }
+
+            if ($action == 'builddoc')
+            {
+                TicketUtilsTicketCardHooks::replace_build_doc($object);
+                return 1;
+            }
         }
 
         if (in_array('ticketlist', $param_context))
@@ -438,11 +444,12 @@ class ActionsTicketUtils
         $param_context = explode(':', $parameters['context']);
 
         if (in_array('ticketcard', $param_context))
-        {
+        {            
             echo TicketUtilsTicketCardHooks::accept_reject_buttons($object, 'private');
             echo TicketUtilsTicketCardHooks::button_abandon_request($object);
             echo TicketUtilsTicketCardHooks::button_abandon($object);
             echo TicketUtilsTicketCardHooks::button_reopen_abandon_request($object);
+            echo TicketUtilsTicketCardHooks::add_document($object);
         }
     }
 
