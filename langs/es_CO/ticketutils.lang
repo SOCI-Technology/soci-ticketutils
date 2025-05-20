@@ -141,6 +141,8 @@ SetupOnlyOneId = Usar la referencia del ticket como único identificador
 SetupAlterStatusLogic = Alterar lógica general de los estados de los tickets
 SetupValidationStatusClosingTimeHours = Tiempo de espera antes de cerrar el ticket cuando se encuentra esperando aprobación (horas)
 SetupUsersToAlertWhenDelay = Usuarios que alertar cuando haya retraso en los tickets (Además del usuario asignado)
+SetupUseTicketPDF = Usar PDF en tickets
+SetupDefaultTicketPDF = Modelo PDF para tickets
 
 SettingSaved = Configuración guardada
 ErrorSavingSetting = Error al guardar configuración
