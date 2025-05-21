@@ -1,5 +1,7 @@
 <?php
 
+require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/class/ticket_extrafields.class.php';
+
 class TicketUtilsTicketListHooks
 {
     public static function hide_public_track_id()
