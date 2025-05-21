@@ -676,10 +676,11 @@ class TicketUtilsTicketCardHooks
         $urlsource = $_SERVER["PHP_SELF"] . "?id=" . $object->id;
         $genallowed = true;/* $user->rights->ficheinter->lire; */
         $delallowed = true;/* $user->rights->ficheinter->creer; */
-
+		$model_pdf = getDolGlobalString('TICKETUTILS_DEFAULT_TICKET_PDF');
+		
         $w = '';
 
-        $w .= $formfile->showdocuments('ticket', $filename, $filedir, $urlsource, $genallowed, $delallowed, $object->model_pdf, 1, 0, 0, 28, 0, '', '', '', $soc->default_lang);
+        $w .= $formfile->showdocuments('ticket', $filename, $filedir, $urlsource, $genallowed, $delallowed, $model_pdf, 1, 0, 0, 28, 0, '', '', '', $soc->default_lang);
 
         return $w;
     }

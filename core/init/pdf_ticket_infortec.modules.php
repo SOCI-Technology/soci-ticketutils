@@ -35,6 +35,7 @@ require_once DOL_DOCUMENT_ROOT . '/core/lib/company.lib.php';
 require_once DOL_DOCUMENT_ROOT . '/core/lib/functions2.lib.php';
 require_once DOL_DOCUMENT_ROOT . '/core/lib/pdf.lib.php';
 
+require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_strings.class.php';
 
 /**
  *	Class to generate the supplier orders with the muscadet model
@@ -116,6 +117,7 @@ class pdf_ticket_infortec extends ModelePDFTicket
 	const BG_IMAGE = 'bg.png';
 	const LOGO_IMAGE = 'logo.png';
 	const LOGO_HEADER = 'logo-header.jpg';
+	const FOOTER = 'footer.jpg';
 
 	/**
 	 *	Constructor
@@ -390,27 +392,8 @@ class pdf_ticket_infortec extends ModelePDFTicket
 			$pdf->SetCompression(false);
 		}
 
+		$pdf->setPageOrientation('P', true, 50);
 		$pdf->SetMargins($this->marge_gauche, $this->marge_haute, $this->marge_droite); // Left, Top, Right
-
-		// Positionne $this->atleastonediscount si on a au moins une remise
-		for ($i = 0; $i < $nblines; $i++)
-		{
-			if ($object->lines[$i]->remise_percent)
-			{
-				$this->atleastonediscount++;
-			}
-		}
-		if (empty($this->atleastonediscount))
-		{
-			$delta = ($this->postotalht - $this->posxdiscount);
-			$this->posxpicture += $delta;
-			$this->posxtva += $delta;
-			$this->posxup += $delta;
-			$this->posxqty += $delta;
-			$this->posxunit += $delta;
-			$this->posxdiscount += $delta;
-			// post of fields after are not modified, stay at same position
-		}
 
 		// New page
 		$pdf->AddPage();
@@ -423,20 +406,16 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$object->fetch_thirdparty();
 		$object->fetch_project();
 
-		/* $this->page_one($pdf, $object, $outputlangs);
-		
+		/* $this->page_one($pdf, $object, $outputlangs);		
 		$pdf->AddPage();
-		$pagenb++; */
 
 		$this->page_two($pdf, $object, $outputlangs);
-
 		$pdf->AddPage();
-		$pagenb++;
 
 		$this->page_three($pdf, $object, $outputlangs);
+		$pdf->AddPage(); */
 
-		$pdf->AddPage();
-		$pagenb++;
+		$this->content($pdf, $object, $outputlangs);
 
 		//$top_shift = $this->_pagehead($pdf, $object, 1, $outputlangs);
 		$pdf->SetFont('', '', $default_font_size - 1);
@@ -446,18 +425,20 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$tab_top = 90 + $top_shift;
 		$tab_top_newpage = (!getDolGlobalInt('MAIN_PDF_DONOTREPEAT_HEAD') ? 42 + $top_shift : 10);
 
-		for ($i = 2; $i <= $pagenb; $i++)
+		$end_page = $pdf->getPage();
+
+		for ($i = 1; $i <= $end_page; $i++)
 		{
 			$pdf->setPage($i);
 			$this->_pagehead($pdf, $object, $outputlangs);
+			$this->_pagefoot($pdf, $object, $outputlangs);
 		}
 
 		// Pied de page
-		$this->_pagefoot($pdf, $object, $outputlangs);
-		if (method_exists($pdf, 'AliasNbPages'))
+		/* if (method_exists($pdf, 'AliasNbPages'))
 		{
 			$pdf->AliasNbPages();
-		}
+		} */
 
 		$pdf->Close();
 
@@ -514,14 +495,16 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$project = $object->project;
 		$thirdparty = $object->thirdparty;
 
-		$bg = '<img src="file:/' . DOL_DOCUMENT_ROOT . '/core/modules/ticket/doc/infortec/' . self::BG_IMAGE . '">';
-		$bg = '';
-
 		$pdf->setPageOrientation('P', false, -10);
-		$pdf->writeHTMLCell($this->page_hauteur, $this->page_largeur, -1, 0, $bg);
+		$pdf->SetMargins(0, 0, 0);
+
+		$bg = '<img src="file:/' . DOL_DOCUMENT_ROOT . '/core/modules/ticket/doc/infortec/' . self::BG_IMAGE . '">';
+		//$bg = '';
+
+		$pdf->writeHTMLCell($this->page_hauteur + 10, $this->page_largeur + 20, -1, 0, $bg);
 
 		$logo = '<img src="file:/' . DOL_DOCUMENT_ROOT . '/core/modules/ticket/doc/infortec/' . self::LOGO_IMAGE . '">';
-		$logo = '';
+		//$logo = '';
 
 		$pdf->writeHTMLCell(150, 150, 30, $this->page_largeur / 2, $logo);
 
@@ -556,6 +539,7 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$pdf->writeHTMLCell(100, 100, 55, 190, $html);
 
 		$pdf->setPageOrientation('P', true, $this->marge_basse);
+		$pdf->SetMargins($this->marge_gauche, $this->marge_haute, $this->marge_droite); // Left, Top, Right
 	}
 
 	/**
@@ -612,6 +596,218 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$pdf->writeHTML($html);
 	}
 
+	/**
+	 *  Show content
+	 * 
+	 *  @param	TCPDF		$pdf     		Object PDF
+	 *  @param  Ticket		$object			Object order
+	 *	@param	Translate	$outputlangs	Object langs for output
+	 */
+	protected function content(&$pdf, $object, $outputlangs)
+	{
+		$object->fetchObjectLinked();
+
+		$intervention_list = $object->linkedObjects['fichinter'] ?? [];
+		/** @var Fichinter[] $intervention_list */
+
+		$html = '';
+
+		$html .= '<h1>';
+		$html .= 'TABLA DE CONTENIDO';
+		$html .= '</h1>';
+
+		if (empty($intervention_list))
+		{
+			$html .= '<p>';
+			$html .= 'No se encontraron intervenciones relacionadas';
+			$html .= '</p>';
+		}
+
+		$html .= '<br>';
+		$html .= '<br>';
+
+		$pdf->writeHTML($html);
+
+		foreach ($intervention_list as $intervention)
+		{
+			$conds = [
+				"fk_intervention = " . $intervention->id
+			];
+			$observation_list = Observacion::get_all($this->db, $conds, 'fecha ASC');
+
+			$html = '';
+
+			$html .= '<hr>';
+
+			$html .= '<h2>';
+			$html .= $intervention->ref . ($intervention->ref_client ?  ' - ' . $intervention->ref_client : '');
+			$html .= '</h2>';
+
+			$html .= '<br>';
+
+			$html .= '<p style="text-align: justify; line-height: 1.2">';
+			$html .= $intervention->description ?: 'Sin descripción';
+			$html .= '</p>';
+
+			$html .= '<br>';
+
+			$html .= '<h3>';
+			$html .= 'OBSERVACIONES';
+			$html .= '<br>';
+			$html .= '</h3>';
+
+			$pdf->writeHTML($html);
+
+			foreach ($observation_list as $index => $observation)
+			{
+				$this->observacion($pdf, $object, $outputlangs, $index, $intervention, $observation);
+			}
+		}
+	}
+
+	/**
+	 *  Show observation
+	 * 
+	 *  @param	TCPDF		$pdf     		Object PDF
+	 *  @param  Ticket		$object			Object order
+	 *	@param	Translate	$outputlangs	Object langs for output
+	 *	@param	Fichinter	$intervention	Object intervention
+	 *	@param	Observacion	$observation	Object observation
+	 */
+	protected function observacion(&$pdf, $object, $outputlangs, $index, $intervention, $observation)
+	{
+		$duracion = SociLibStrings::get_time_string($observation->duracion, true, false);
+
+		$html = '';
+
+		$html .= '<h4>';
+		$html .= 'Observación #' . ($index + 1);
+		$html .= '</h4>';
+
+		$html .= '<p>';
+
+		$html .= '<span>';
+		$html .= '<b>';
+		$html .= 'Fecha: ';
+		$html .= '</b>';
+		$html .= SociLibStrings::format_date('d/m/Y, H:i:s', $observation->fecha);
+		$html .= '</span>';
+
+		$html .= '<br>';
+
+		$html .= '<span>';
+		$html .= '<b>';
+		$html .= 'Duración: ';
+		$html .= '</b>';
+
+		$html .= $duracion ?: 'No definida';
+
+		$html .= '</span>';
+
+		$html .= '</p>';
+
+		$pdf->writeHTML($html);
+
+		$html = '';
+
+		$html .= '<b>';
+		$html .= 'Contenido:';
+		$html .= '</b>';
+
+		$html .= '<p>';
+		$html .= $observation->descripcion;
+		$html .= '</p>';
+
+		$html .= '<br>';
+		$html .= '<br>';
+		$html .= '<br>';
+
+		$pdf->writeHTML($html);
+
+		/**
+		 * Imágenes
+		 */
+
+		$obs_files_location = DOL_DATA_ROOT . '/observaciones/obs/' . $observation->id . '/';
+
+		$files = get_folder_files($obs_files_location);
+
+		$img_wh = 50;
+
+		$cur_page = $pdf->getPage();
+
+		$max_y = $pdf->GetY();
+
+		$curX = $this->marge_gauche;
+		$curY = $max_y;
+		
+		foreach ($files as $index => $image)
+		{
+			if ($curX + $img_wh > $this->page_hauteur - $this->marge_droite)
+			{
+				$curX = $this->marge_gauche;
+				$curY = $curY + $img_wh;
+			}
+
+			/* if ($pdf->getPage() > $cur_page)
+			{
+				$curY = $tab_top_newpage;
+				$cur_page = $pdf->getPage();
+			} */
+
+			$file_path = $obs_files_location . $image['file'];
+
+			$html = '<img src="file:/' . $file_path . '"/>';
+
+			$pdf->writeHTMLCell(
+				$img_wh,
+				$img_wh,
+				$curX,
+				$curY,
+				$html,
+				0,
+				1,
+				false
+			);
+
+			/* $final_y = $pdf->GetY();
+
+			if ($pdf->getPage() > $cur_page)
+			{
+				$pdf->rollbackTransaction(true);
+
+				$curY = $tab_top_newpage;
+				$pdf->AddPage();
+				$cur_page = $pdf->getPage();
+
+				$pdf->writeHTMLCell(
+					$img_wh,
+					$img_wh,
+					$curX,
+					$curY,
+					$html,
+					0,
+					1,
+					false
+				);
+
+				$final_y = $pdf->GetY();
+				$max_y = $final_y;
+			}
+			else
+			{
+				$pdf->commitTransaction();
+
+				if ($final_y >= $max_y)
+				{
+					$max_y = $final_y;
+				}
+			}*/
+
+			$curX += $img_wh;
+		}
+	}
+
 	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.PublicUnderscore
 	/**
 	 *  Show top header of page.
@@ -628,7 +824,19 @@ class pdf_ticket_infortec extends ModelePDFTicket
 
 		$html = '<img src="file:/' . DOL_DOCUMENT_ROOT . '/core/modules/ticket/doc/infortec/' . self::LOGO_HEADER . '">';
 
-		$pdf->writeHTMLCell(75, 50, 0, 0, $html);
+		$pdf->writeHTMLCell(75, 50, 5, 0, $html);
+
+		$html = '';
+
+		$html .= '<div style="text-align: right">';
+		$html .= '<b>CÓDIGO:</b> ING-FOR-105';
+		$html .= '<br>';
+		$html .= '<b>VERSIÓN:</b> 01';
+		$html .= '<br>';
+		$html .= '<b>FECHA:</b> 09/08/2024';
+		$html .= '</div>';
+
+		$pdf->writeHTMLCell(75, 50, 130, 10, $html);
 	}
 
 	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.PublicUnderscore
@@ -645,7 +853,14 @@ class pdf_ticket_infortec extends ModelePDFTicket
 	{
 		// $showdetails = getDolGlobalInt('MAIN_GENERATE_DOCUMENTS_SHOW_FOOT_DETAILS', 0);
 		// return pdf_pagefoot($pdf, $outputlangs, 'SUPPLIER_ORDER_FREE_TEXT', $this->emetteur, $this->marge_basse, $this->marge_gauche, $this->page_hauteur, $object, $showdetails, $hidefreetext);
+		$pdf->setPageOrientation('P', true, 0);
 
+		$html = '';
 
+		$html .= '<img src="file:/' . DOL_DOCUMENT_ROOT . '/core/modules/ticket/doc/infortec/' . self::FOOTER . '">';
+
+		$pdf->writeHTMLCell(170, 50, 20, $this->page_largeur + 37, $html);
+
+		$pdf->setPageOrientation('P', true, $this->marge_basse);
 	}
 }
