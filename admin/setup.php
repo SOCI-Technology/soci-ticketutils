@@ -222,6 +222,24 @@ echo '</tr>';
  * END ALTER STATUS LOGIC
  */
 
+/**
+ * INTERNAL EXTERNAL ON CREATION
+ */
+echo '<tr>';
+
+echo '<td>';
+echo $langs->trans('SetupInternalExternalOnCreation');
+echo '</td>';
+
+echo '<td>';
+echo SociConstField::print('TICKEUTILS_INTERNAL_EXTERNAL_ON_CREATION', 'boolean', $setup_action);
+echo '</td>';
+
+echo '</tr>';
+/**
+ * END INTERNAL EXTERNAL ON CREATION
+ */
+
 echo '</table>';
 
 print dol_get_fiche_end();

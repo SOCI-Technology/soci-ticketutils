@@ -216,9 +216,12 @@ class ActionsTicketUtils
 
             if ($action == 'create')
             {
-                $print = TicketUtilsTicketCardHooks::change_creation_form();
+                if (getDolGlobalInt('TICKEUTILS_INTERNAL_EXTERNAL_ON_CREATION'))
+                {
+                    $print = TicketUtilsTicketCardHooks::change_creation_form();
 
-                echo $print;
+                    echo $print;
+                }
             }
         }
     }
