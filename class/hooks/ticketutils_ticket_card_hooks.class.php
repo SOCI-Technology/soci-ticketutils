@@ -680,7 +680,13 @@ class TicketUtilsTicketCardHooks
 		
         $w = '';
 
+        $w .= '<div style="display: none">';
+        $w .= '<div id="ticket_docs_container">';
         $w .= $formfile->showdocuments('ticket', $filename, $filedir, $urlsource, $genallowed, $delallowed, $model_pdf, 1, 0, 0, 28, 0, '', '', '', $soc->default_lang);
+        $w .= '</div>';
+        $w .= '</div>';
+
+        $w .= '<script src="'. DOL_URL_ROOT .'/custom/ticketutils/js/move_ticket_docs.js?'. time() .'"></script>';
 
         return $w;
     }

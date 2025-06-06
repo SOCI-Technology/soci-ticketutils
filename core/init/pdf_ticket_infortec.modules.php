@@ -145,7 +145,7 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$this->marge_gauche = 20;
 		$this->marge_droite = 20;
 		$this->marge_haute = 40;
-		$this->marge_basse = 20;
+		$this->marge_basse = 50;
 
 		$this->option_logo = 1; // Display logo
 		$this->option_tva = 1; // Manage the vat option FACTURE_TVAOPTION
@@ -392,7 +392,7 @@ class pdf_ticket_infortec extends ModelePDFTicket
 			$pdf->SetCompression(false);
 		}
 
-		$pdf->setPageOrientation('P', true, 50);
+		$pdf->setPageOrientation('P', true, $this->marge_basse);
 		$pdf->SetMargins($this->marge_gauche, $this->marge_haute, $this->marge_droite); // Left, Top, Right
 
 		// New page
@@ -406,16 +406,18 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$object->fetch_thirdparty();
 		$object->fetch_project();
 
-		/* $this->page_one($pdf, $object, $outputlangs);		
+		$this->page_one($pdf, $object, $outputlangs);
 		$pdf->AddPage();
 
 		$this->page_two($pdf, $object, $outputlangs);
 		$pdf->AddPage();
 
 		$this->page_three($pdf, $object, $outputlangs);
-		$pdf->AddPage(); */
+		$pdf->AddPage();
 
 		$this->content($pdf, $object, $outputlangs);
+
+		$this->user_signature($pdf, $object, $outputlangs);
 
 		//$top_shift = $this->_pagehead($pdf, $object, 1, $outputlangs);
 		$pdf->SetFont('', '', $default_font_size - 1);
@@ -427,7 +429,7 @@ class pdf_ticket_infortec extends ModelePDFTicket
 
 		$end_page = $pdf->getPage();
 
-		for ($i = 1; $i <= $end_page; $i++)
+		for ($i = 2; $i <= $end_page; $i++)
 		{
 			$pdf->setPage($i);
 			$this->_pagehead($pdf, $object, $outputlangs);
@@ -499,18 +501,18 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$pdf->SetMargins(0, 0, 0);
 
 		$bg = '<img src="file:/' . DOL_DOCUMENT_ROOT . '/core/modules/ticket/doc/infortec/' . self::BG_IMAGE . '">';
-		//$bg = '';
+		// $bg = '';
 
 		$pdf->writeHTMLCell($this->page_hauteur + 10, $this->page_largeur + 20, -1, 0, $bg);
 
 		$logo = '<img src="file:/' . DOL_DOCUMENT_ROOT . '/core/modules/ticket/doc/infortec/' . self::LOGO_IMAGE . '">';
-		//$logo = '';
+		// $logo = '';
 
 		$pdf->writeHTMLCell(150, 150, 30, $this->page_largeur / 2, $logo);
 
 		$html = '';
 
-		$html .= '<div style="text-align: center; line-height: 1">';
+		$html .= '<div style="text-align: center; line-height: 1; color: white">';
 
 		$html .= '<h1>';
 		$html .= 'INFORME TÉCNICO';
@@ -557,7 +559,7 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$html = '';
 
 		$html .= '<p style="text-align: justify; line-height: 1.2">';
-		$html .= 'Este documento es confidencial, contiene detalles técnicos respecto a la implementación del sistema de seguridad {{solution_name}} de {{thirdparty_name}}, llevado a cabo por el equipo de ingeniería de INFORTEC. Esimportante que el presente documento solo pueda ser accedido por el personal responsable del mantenimiento de la plataforma, ya que, en manos equivocadas, puede conducir a comprometer la seguridad digital de la infraestructura.';
+		$html .= 'Este documento es confidencial, contiene detalles técnicos respecto a la implementación del sistema de seguridad {{solution_name}} de {{thirdparty_name}}, llevado a cabo por el equipo de ingeniería de INFORTEC. Es importante que el presente documento solo pueda ser accedido por el personal responsable del mantenimiento de la plataforma, ya que, en manos equivocadas, puede conducir a comprometer la seguridad digital de la infraestructura.';
 		$html .= '</p>';
 
 		$html = str_replace('{{solution_name}}', $project->title, $html);
@@ -586,7 +588,7 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		$html .= '</h3>';
 
 		$html .= '<p style="text-align: justify; line-height: 1.2">';
-		$html .= 'El presente informe de aseguramiento fue realizado durante el mes de {{month}}; el cual se realiza con el fin de identificar las oportunidades de mejora que permite "{{project_title}}” para cerrar las brechas de seguridad y generar un plan de acción, en pro del mejoramiento de las posturas de ciberseguridad en la entidad ante los posibles ataques. De forma general el proyecto consistió en la implementación de los ítems abajo descritos, que permiten validar el estado de la seguridad “{{solution_type}}" del cliente y las posibles mejoras dentro de las normativas de protección, para el mejoramiento y cierre de riesgos existentes dentro del proceso.';
+		$html .= 'El presente informe de aseguramiento fue realizado durante el mes de {{month}}; el cual se realiza con el fin de identificar las oportunidades de mejora que permite "{{project_title}}” para cerrar las brechas de seguridad y generar un plan de acción, en pro del mejoramiento de las posturas de ciberseguridad en la entidad ante los posibles ataques. De forma general el proyecto consistió en la implementación de los ítems abajo descritos, que permiten validar el estado de la seguridad del cliente y las posibles mejoras dentro de las normativas de protección, para el mejoramiento y cierre de riesgos existentes dentro del proceso.';
 		$html .= '</p>';
 
 		$html = str_replace('{{month}}', $month, $html);
@@ -631,7 +633,8 @@ class pdf_ticket_infortec extends ModelePDFTicket
 		foreach ($intervention_list as $intervention)
 		{
 			$conds = [
-				"fk_intervention = " . $intervention->id
+				"fk_intervention = " . $intervention->id,
+				"fk_contract_line > 0"
 			];
 			$observation_list = Observacion::get_all($this->db, $conds, 'fecha ASC');
 
@@ -724,6 +727,8 @@ class pdf_ticket_infortec extends ModelePDFTicket
 
 		$pdf->writeHTML($html);
 
+		//return;
+
 		/**
 		 * Imágenes
 		 */
@@ -740,20 +745,19 @@ class pdf_ticket_infortec extends ModelePDFTicket
 
 		$curX = $this->marge_gauche;
 		$curY = $max_y;
-		
+
+		$row_count = 1;
+
 		foreach ($files as $index => $image)
 		{
-			if ($curX + $img_wh > $this->page_hauteur - $this->marge_droite)
+			$pdf->startTransaction();
+
+			if ($row_count > 3)
 			{
 				$curX = $this->marge_gauche;
-				$curY = $curY + $img_wh;
+				$curY = $max_y + 5;
+				$row_count = 1;
 			}
-
-			/* if ($pdf->getPage() > $cur_page)
-			{
-				$curY = $tab_top_newpage;
-				$cur_page = $pdf->getPage();
-			} */
 
 			$file_path = $obs_files_location . $image['file'];
 
@@ -770,13 +774,13 @@ class pdf_ticket_infortec extends ModelePDFTicket
 				false
 			);
 
-			/* $final_y = $pdf->GetY();
+			$final_y = $pdf->GetY();
 
 			if ($pdf->getPage() > $cur_page)
 			{
 				$pdf->rollbackTransaction(true);
 
-				$curY = $tab_top_newpage;
+				$curY = $this->marge_haute;
 				$pdf->AddPage();
 				$cur_page = $pdf->getPage();
 
@@ -802,10 +806,87 @@ class pdf_ticket_infortec extends ModelePDFTicket
 				{
 					$max_y = $final_y;
 				}
-			}*/
+			}
 
 			$curX += $img_wh;
+			$row_count++;
 		}
+	}
+
+	/**
+	 * @param	TCPDF		$pdf     		Object PDF
+	 * @param 	Ticket		$object     	Object to show
+	 * @param  	Translate	$outputlangs	Object lang for output
+	 */
+	protected function user_signature(&$pdf, $object, $outputlangs)
+	{
+		$user_assigned = new User($this->db);
+		$user_assigned->fetch($object->fk_user_assign);
+
+		$html = '';
+
+		$html .= 'Cordialmente, ';
+		$html .= '<br>';
+
+		$html .= '<div>';
+
+		$html .= '<b>';
+		$html .= $user_assigned->getFullName($outputlangs);
+		$html .= '</b>';
+
+		$html .= '<br>';
+		$html .= '<br>';
+
+		$html .= '<b>';
+		$html .= $user_assigned->job;
+		$html .= '</b>';
+
+		// Celular
+		$html .= '<div>';
+		$html .= '<b>';
+		$html .= 'Celular: ';
+		$html .= '</b>';
+
+		$html .= $user_assigned->user_mobile;
+
+		$html .= '</div>';
+
+		// Email
+		$html .= '<div>';
+		$html .= '<b>';
+		$html .= 'E-mail: ';
+		$html .= '</b>';
+
+		$html .= $user_assigned->email;
+
+		$html .= '</div>';
+
+		// Webpage
+
+		$html .= '<a href="http://www.infortec.co">';
+		$html .= '<b>';
+		$html .= 'www.infortec.co';
+		$html .= '</b>';
+		$html .= '</a>';
+
+		$html .= '</div>';
+
+		$current_page = $pdf->getPage();
+
+		$pdf->startTransaction();
+
+		$pdf->writeHTML($html);
+
+		if ($pdf->getPage() > $current_page)
+		{
+			$pdf->rollbackTransaction(true);
+
+			$pdf->AddPage();
+
+			$pdf->writeHTML($html);
+		}
+
+		$pdf->commitTransaction();
 	}
 
 	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.PublicUnderscore
