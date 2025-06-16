@@ -10,6 +10,7 @@ require_once $hooks_route . '/ticketutils_create_ticket_hooks.class.php';
 require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/lib/ticketutils.lib.php';
 
 require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_strings.class.php';
+require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_hooks.class.php';
 
 class ActionsTicketUtils
 {
@@ -304,11 +305,19 @@ class ActionsTicketUtils
 
     function printFieldListFrom($parameters, &$object, &$action, $hookmanager)
     {
-        $param_context = explode(':', $parameters['context']);
-
-        if (in_array('ticketlist', $param_context))
+        if (SociLibHooks::is_in_context('ticketlist', $parameters))
         {
             $res = TicketUtilsTicketListHooks::add_list_from();
+
+            $this->resprints = $res;
+        }
+    }
+
+    function printFieldListWhere($parameters, &$object, &$action, $hookmanager)
+    {
+        if (SociLibHooks::is_in_context('ticketlist', $parameters))
+        {
+            $res = TicketUtilsTicketListHooks::add_list_where();
 
             $this->resprints = $res;
         }
@@ -496,6 +505,16 @@ class ActionsTicketUtils
 
             accessforbidden('', 0);
             exit();
+        }
+    }
+
+    function printFieldPreListTitle($parameters, &$object, &$action, $hookmanager)
+    {
+        if (SociLibHooks::is_in_context('ticketlist', $parameters))
+        {
+            $res = TicketUtilsTicketListHooks::add_pre_list_title();
+
+            $this->resprints = $res;
         }
     }
 }

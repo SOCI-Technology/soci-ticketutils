@@ -1,7 +1,35 @@
 <?php
 
+require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_lists.class.php';
+
 class TicketUtilsTicketListHooks
 {
+    public static function columns()
+    {
+        global $langs;
+
+        $columns = [
+            "tte_rating" => [
+                "label" => $langs->trans('Rating'),
+                "input_type" => "number",
+                "field" => "tte.rating",
+                "checked" => 1,
+                "enabled" => 1,
+                "arrayfield" => "tte.rating",
+            ],
+            "tte_rating_comment" => [
+                "label" => $langs->trans('Comments'),
+                "input_type" => "text",
+                "field" => "tte.rating_comment",
+                "checked" => 1,
+                "enabled" => 1,
+                "arrayfield" => "tte.rating_comment",
+            ]
+        ];
+
+        return $columns;
+    }
+
     public static function hide_public_track_id()
     {
         global $arrayfields;
@@ -13,19 +41,9 @@ class TicketUtilsTicketListHooks
     {
         global $arrayfields, $langs;
 
-        $arrayfields['tte.rating'] = [
-            'label' => $langs->trans('Rating'),
-            'checked' => 0,
-            'position' => 2000,
-            'enabled' => 1
-        ];
+        $columns = self::columns();
 
-        $arrayfields['tte.rating_comment'] = [
-            'label' => $langs->trans('Comments'),
-            'checked' => 0,
-            'position' => 2000,
-            'enabled' => 1
-        ];
+        SociLibLists::add_arrayfields($arrayfields, $columns);
     }
 
     public static function add_list_select()
@@ -47,36 +65,108 @@ class TicketUtilsTicketListHooks
         $sql .= " LEFT JOIN " . MAIN_DB_PREFIX . TicketExtrafields::TABLE_NAME . " as tte";
         $sql .= " ON tte.fk_ticket = t.rowid";
 
+        $sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "element_contact as ec";
+        $sql .= " ON ec.element_id = t.rowid";
+
+        $sql .= " INNER JOIN " . MAIN_DB_PREFIX . "c_type_contact as ctc";
+        $sql .= " ON ctc.rowid = ec.fk_c_type_contact";
+        $sql .= " AND ctc.element = 'ticket'";
+        $sql .= " AND ctc.source = 'internal'";
+
         return $sql;
     }
 
     public static function add_list_where()
     {
+        global $user;
+
+        $columns = self::columns();
+
+        $mode = GETPOST('mode');
+
+        $remove_filter = GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter', 'alpha') || GETPOST('button_removefilter.x', 'alpha');
+
+        $sql = "";
+
+        $sql .= SociLibLists::list_where($columns);
+
+        $search_user_contact = $remove_filter ? [] : GETPOST('search_user_contact', 'array');
+
+        if ($mode == 'mine')
+        {
+            if (!in_array($user->id, $search_user_contact))
+            {
+                $search_user_contact[] = $user->id;
+            }
+        }
+
+        if (!empty($search_user_contact))
+        {
+            $sql .= ($mode == 'mine' ? " OR " : " AND ") . "ec.fk_socpeople IN (" . implode(',', $search_user_contact) . ")";
+        }
+
+        return $sql;
     }
 
     public static function add_pre_list_title()
     {
+        global $db, $langs, $user;
+        /** @var DoliDB $db */
+
+        $mode = GETPOST('mode');
+
+        $remove_filter = GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter', 'alpha') || GETPOST('button_removefilter.x', 'alpha');
+
+        $search_user_contact = $remove_filter ? [] : GETPOST('search_user_contact', 'array');
+
+        $user_sql = "";
+
+        $user_sql .= " SELECT rowid as id, firstname, lastname FROM " . MAIN_DB_PREFIX . "user as u";
+        $user_sql .= " WHERE u.statut = " . User::STATUS_ENABLED;
+
+        $resql = $db->query($user_sql);
+
+        $user_options = [];
+
+        if ($resql)
+        {
+            for ($i = 0; $i < $db->num_rows($resql); $i++)
+            {
+                $obj = $db->fetch_object($resql);
+
+                $user_options[$obj->id] = $obj->firstname . ' ' . $obj->lastname;
+            }
+        }
+
+        if ($mode == 'mine')
+        {
+            if (!in_array($user->id, $search_user_contact))
+            {
+                $search_user_contact[] = $user->id;
+            }
+        }
+
+        $w = '';
+
+        $w .= '<div class="divsearchfield">';
+
+        $w .= img_picto('', 'user', 'class="pictofixedwidth"');
+        $w .= Form::multiselectarray('search_user_contact', $user_options, $search_user_contact, 0, 0, '', 0, 0, '', '', $langs->trans('TicketsWithThisContacts'));
+
+        $w .= '</div>';
+
+        return $w;
     }
 
     public static function add_list_option()
     {
         global $arrayfields;
 
+        $columns = self::columns();
+
         $w = '';
 
-        if ($arrayfields['tte.rating']['checked'])
-        {
-            $w .= '<td class="liste_titre center">';
-            $w .= '<input>';
-            $w .= '</td>';
-        }
-
-        if ($arrayfields['tte.rating_comment']['checked'])
-        {
-            $w .= '<td class="liste_titre center">';
-            $w .= '<input>';
-            $w .= '</td>';
-        }
+        $w .= SociLibLists::list_option($arrayfields, $columns);
 
         return $w;
     }
@@ -85,17 +175,11 @@ class TicketUtilsTicketListHooks
     {
         global $langs, $arrayfields, $param, $sortfield, $sortorder;
 
+        $columns = self::columns();
+
         $w = '';
 
-        if ($arrayfields['tte.rating']['checked'])
-        {
-            $w .= getTitleFieldOfList('Rating', 0, $_SERVER['PHP_SELF'], 'tte.rating', '', $param, '', $sortfield, $sortorder, '', 0, '') . "\n";
-        }
-
-        if ($arrayfields['tte.rating_comment']['checked'])
-        {
-            $w .= getTitleFieldOfList('Comments', 0, $_SERVER['PHP_SELF'], 'tte.rating_comment', '', $param, '', $sortfield, $sortorder, '', 0, '') . "\n";
-        }
+        $w .= SociLibLists::list_title($arrayfields, $columns);
 
         return $w;
     }
