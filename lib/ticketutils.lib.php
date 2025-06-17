@@ -231,6 +231,10 @@ class TicketUtilsLib
             {
                 unset($labels[Ticket::STATUS_IN_PROGRESS], $labels[Ticket::STATUS_WAITING]);
             }
+            if ($ticket->status == Ticket::STATUS_WAITING)
+            {
+                unset($labels[Ticket::STATUS_NEED_MORE_INFO]);
+            }
         }
 
         $ticket->statuts = $labels;
@@ -1553,7 +1557,7 @@ class TicketUtilsLib
         return $w;
     }
 
-        /**
+    /**
      * @param   Ticket  $ticket 
      */
     public static function accept_reject_buttons($ticket, $view = 'public')
@@ -1592,5 +1596,189 @@ class TicketUtilsLib
         $w .= '</div>';
 
         return $w;
+    }
+
+    public static function clean_ticket_verification()
+    {
+        global $db;
+        /** @var DoliDB $db */
+
+        require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';
+
+        $thirty_minutes_ago = time() - 1800;
+        $thirty_minutes_ago = date('Y-m-d H:i:s', $thirty_minutes_ago);
+
+        $sql = "";
+
+        $sql .= "SELECT c.rowid, c.name, c.tms";
+        $sql .= " FROM " . MAIN_DB_PREFIX . "const as c";
+        $sql .= " WHERE (c.tms < '" . $thirty_minutes_ago . "' AND c.name LIKE 'ticket_verification%')";
+
+        $resql = $db->query($sql);
+
+        for ($i = 0; $i < $db->num_rows($resql); $i++)
+        {
+            $obj = $db->fetch_object($resql);
+
+            $name = $obj->name;
+
+            dolibarr_del_const($db, $name);
+        }
+    }
+
+    public static function clean_ticket_verification_email($email)
+    {
+        global $db;
+        /** @var DoliDB $db */
+
+        require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';
+
+        $thirty_minutes_ago = time() - 1800;
+        $thirty_minutes_ago = date('Y-m-d H:i:s', $thirty_minutes_ago);
+
+        $sql = "";
+
+        $sql .= "SELECT c.rowid, c.name, c.tms";
+        $sql .= " FROM " . MAIN_DB_PREFIX . "const as c";
+        $sql .= " WHERE c.name LIKE 'ticket_verification%'";
+        $sql .= " AND c.value LIKE '%|" . $email . "%'";
+
+        $resql = $db->query($sql);
+
+        for ($i = 0; $i < $db->num_rows($resql); $i++)
+        {
+            $obj = $db->fetch_object($resql);
+
+            $name = $obj->name;
+
+            dolibarr_del_const($db, $name);
+        }
+    }
+
+    public static function create_ticket_verification($email)
+    {
+        global $db;
+
+        require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';
+
+        self::clean_ticket_verification();
+        self::clean_ticket_verification_email($email);
+
+        $code = random_int(1000, 9999);
+        $value = $code . '|' . $email;
+
+        $time = time();
+
+        $name = 'ticket_verification_' . $time;
+
+        $res = dolibarr_set_const($db, $name, $value);
+
+        if (!$res)
+        {
+            return -1;
+        }
+
+        $res = self::send_ticket_verification($email, $code);
+
+        return $res;
+    }
+
+    public static function send_ticket_verification($email, $code)
+    {
+        global $db, $langs, $mysoc;
+
+        $from = getDolGlobalString('TICKET_NOTIFICATION_EMAIL_FROM');
+
+        if (!$from || !$email)
+        {
+            return -1;
+        }
+
+        $langs->load('ticketutils@ticketutils');
+
+        $subject = '';
+
+        $subject .= '[' . $mysoc->getFullName($langs) . '] ' . $langs->transnoentitiesnoconv('TicketVerificationEmailSubject');
+
+        $body = '';
+
+        $body .= $langs->transnoentitiesnoconv('TicketVerificationEmailBody');
+
+        $body .= '<br>';
+        $body .= '<br>';
+
+        $body .= '<span style="font-weight: bold; font-size: 16pt">';
+        $body .= $code;
+        $body .= '</span>';
+
+        require_once DOL_DOCUMENT_ROOT . '/core/class/CMailFile.class.php';
+
+        $mail = new CMailFile(
+            $subject,
+            $email,
+            $from,
+            $body,
+            [],
+            [],
+            [],
+            '',
+            '',
+            0,
+            1
+        );
+
+        try
+        {
+            $res = $mail->sendfile();
+
+            if (!$res)
+            {
+                throw new Exception($mail->error);
+            }
+
+            return 1;
+        }
+        catch (Exception $e)
+        {
+            dol_syslog('TICKETUTILS: ERROR SENDING EMAIL: ' . $e->getMessage(), LOG_ERR);
+            return -1;
+        }
+    }
+
+    public static function check_ticket_verification($code, $email)
+    {
+        global $db;
+        /** @var DoliDB $db */
+
+        require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';
+
+        $value = $code . '|' . $email;
+
+        $sql = "";
+
+        $sql .= "SELECT c.rowid, c.name, c.tms";
+        $sql .= " FROM " . MAIN_DB_PREFIX . "const as c";
+        $sql .= " WHERE c.name LIKE 'ticket_verification%'";
+        $sql .= " AND c.value = '" . $value . "'";
+
+        $resql = $db->query($sql);
+
+        if (!$resql)
+        {
+            return -1;
+        }
+
+        $obj = $db->fetch_object($resql);
+
+        if (!($obj->rowid > 0))
+        {
+            return -1;
+        }
+
+        $name = $obj->name;
+
+        dolibarr_del_const($db, $name);
+
+        return 1;
     }
 }

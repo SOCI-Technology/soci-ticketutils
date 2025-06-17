@@ -392,13 +392,31 @@ echo '</thead>';
  */
 
 /**
+ * AUTHENTICATION EMAIL
+ */
+echo '<tr>';
+
+echo '<td>';
+echo $langs->trans('SetupAuthenticationEmail');
+echo '</td>';
+
+echo '<td>';
+echo SociConstField::print('TICKETUTILS_AUTHENTICATION_EMAIL', 'boolean', $form_action);
+echo '</td>';
+
+echo '</tr>';
+/**
+ * END AUTHENTICATION EMAIL
+ */
+
+/**
  * VALIDATION STATUS
  */
 echo '<tr>';
 
 echo '<td>';
 echo $langs->trans('SetupValidationStatus');
-echo '</td>';
+echo '</>';
 
 echo '<td>';
 echo SociConstField::print('TICKETUTILS_VALIDATION_STATUS', 'boolean', $form_action);

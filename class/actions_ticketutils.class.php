@@ -289,6 +289,11 @@ class ActionsTicketUtils
                 TicketUtilsTicketCardHooks::hide_public_track_id();
             }
         }
+
+        if (in_array('publicnewticketcard', $param_context))
+        {
+            TicketUtilsCreateTicketHooks::create_ticket_script();
+        }
     }
 
     function printFieldListSelect($parameters, &$object, &$action, $hookmanager)

@@ -357,8 +357,13 @@ class TicketUtilsCreateTicketHooks
             $message .= $langs->transnoentities('TicketNewEmailBodyInfosTicket') . '<br>';
 
             $url_public_ticket = ($conf->global->TICKET_URL_PUBLIC_INTERFACE ? $conf->global->TICKET_URL_PUBLIC_INTERFACE . '/view.php' : dol_buildpath('/public/ticket/view.php', 2)) . '?track_id=' . $object->ref;
-            $infos_new_ticket = $langs->transnoentities('TicketNewEmailBodyInfosTrackId', '<a href="' . $url_public_ticket . '" rel="nofollow noopener">' . $object->ref . '</a>') . '<br>';
-            $infos_new_ticket .= $langs->transnoentities('TicketNewEmailBodyInfosTrackUrl') . '<br><br>';
+
+            $infos_new_ticket = '';
+
+            $infos_new_ticket .= $langs->transnoentities('TicketNewEmailBodyInfosTrackUrl');
+            $infos_new_ticket .= '<br>';
+            $infos_new_ticket .= $langs->transnoentities('TicketNewEmailBodyInfosTrackId', '<a href="' . $url_public_ticket . '" rel="nofollow noopener">' . $object->ref . '</a>') . '<br>';
+            $infos_new_ticket .= '<br><br>';
 
             $message .= $infos_new_ticket;
             $message .= getDolGlobalString('TICKET_MESSAGE_MAIL_SIGNATURE', $langs->transnoentities('TicketMessageMailSignatureText', $mysoc->name));
@@ -459,7 +464,7 @@ class TicketUtilsCreateTicketHooks
     public static function add_select_company()
     {
         global $langs;
-        
+
         $w = '';
 
         $w .= '<div id="select_company_container" style="display: none">';
@@ -488,5 +493,82 @@ class TicketUtilsCreateTicketHooks
         $w .= '<script src="' . DOL_URL_ROOT . '/custom/ticketutils/js/select_company.js?time=' . time() . '    "></script>';
 
         return $w;
+    }
+
+    public static function create_ticket_script()
+    {
+        if (!getDolGlobalInt('TICKETUTILS_AUTHENTICATION_EMAIL'))
+        {
+            return;
+        }
+
+        global $langs;
+
+        echo '<link rel="stylesheet" href="' . DOL_URL_ROOT . '/custom/ticketutils/css/ticket_verification.css">';
+        ?>
+        <script>
+            window.dolData = {
+                URL_ROOT: '<?php echo DOL_MAIN_URL_ROOT; ?>',
+                translations: {
+                    errorCreatingTicketVerification: '<?php echo $langs->transnoentitiesnoconv('ErrorCreatingTicketVerification'); ?>',
+                    errorTicketEmail: '<?php echo $langs->transnoentitiesnoconv('ErrorTicketEmail'); ?>',
+                    errorTicketTypeCode: '<?php echo $langs->transnoentitiesnoconv('ErrorTicketTypeCode'); ?>',
+                    errorTicketSubject: '<?php echo $langs->transnoentitiesnoconv('ErrorTicketSubject'); ?>',
+                    errorTicketMessage: '<?php echo $langs->transnoentitiesnoconv('ErrorTicketMessage'); ?>',
+                }
+            };
+        </script>
+        <?php
+        echo '<script src="' . DOL_URL_ROOT . '/custom/ticketutils/js/ticket_verification.js?' . time() . '"></script>';
+        
+        echo '<div class="ticket-verification-modal" data-modal-id="ticket-verification-modal" style="display: none">';
+
+        echo '<div class="ticket-verification-modal-content">';
+
+        /**
+         * HEADER
+         */
+        echo '<div class="ticket-verification-modal-header">';
+
+        echo '<span>';
+        echo $langs->trans('TicketVerification');
+        echo '</span>';
+
+        echo '<button type="button" class="ticket-verification-modal-button toggle-modal" data-modal-id="ticket-verification-modal">';
+        echo '<i class="fas fa-times"></i>';
+        echo '</button>';
+
+        echo '</div>';
+        /**
+         * END HEADER
+         */
+
+        /**
+         * BODY
+         */
+        echo '<div class="ticket-verification-modal-body">';
+        
+        echo '<div>';
+
+        echo '<div>';
+        echo $langs->trans('TicketVerificationModalMessage');
+        echo '</div>';
+        
+        echo '<input name="verification-code" id="verification-code">';
+        
+        echo '<button class="butAction" id="submit-verification-code">';
+        echo $langs->trans('Submit');
+        echo '</button>';
+        
+        echo '</div>';
+        
+        echo '</div>';
+        /**
+         * END BODY
+         */
+
+        echo '</div>';
+
+        echo '</div>';
     }
 }

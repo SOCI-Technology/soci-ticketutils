@@ -68,7 +68,7 @@ class TicketUtilsTicketListHooks
         $sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "element_contact as ec";
         $sql .= " ON ec.element_id = t.rowid";
 
-        $sql .= " INNER JOIN " . MAIN_DB_PREFIX . "c_type_contact as ctc";
+        $sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "c_type_contact as ctc";
         $sql .= " ON ctc.rowid = ec.fk_c_type_contact";
         $sql .= " AND ctc.element = 'ticket'";
         $sql .= " AND ctc.source = 'internal'";
@@ -104,6 +104,8 @@ class TicketUtilsTicketListHooks
         {
             $sql .= ($mode == 'mine' ? " OR " : " AND ") . "ec.fk_socpeople IN (" . implode(',', $search_user_contact) . ")";
         }
+
+        $sql .= " GROUP BY t.rowid, tte.rowid";
 
         return $sql;
     }

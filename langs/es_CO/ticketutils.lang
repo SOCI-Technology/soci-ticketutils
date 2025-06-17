@@ -25,7 +25,7 @@ TicketStatusNotAssigned = No asignado
 TicketStatusAssigned = Asignado
 TicketStatusInProgress = En progreso
 TicketStatusWaiting = En espera
-TicketStatusWaitingValidation = Esperando aprobación
+TicketStatusWaitingValidation = Por cerrar
 TicketStatusNeedMoreInformation = Esperando comentarios
 TicketStatusClosed = Resuelto
 TicketStatusAbandoned = Abandonado
@@ -124,6 +124,17 @@ EntryTypeExternal = Externo
 CreationDate = Fecha de creación
 
 TicketsWithThisContacts = Tickets con estos contactos
+
+TicketVerificationEmailSubject = Verificación para crear ticket
+TicketVerificationEmailBody = Para completar la creación de su ticket, por favor use el código a continuación
+ErrorCreatingTicketVerification = Error al crear el código de verificación del ticket
+
+ErrorTicketEmail = Falta correo electrónico
+ErrorTicketTypeCode = Falta tipo de solicitud
+ErrorTicketSubject = Falta tema de la solicitud
+ErrorTicketMessage = Falta mensaje de la solicitud
+
+TicketVerificationModalMessage = Ingrese el código que recibió al correo electrónico con el que está realizando la solicitud
 
 #
 # SETUP
