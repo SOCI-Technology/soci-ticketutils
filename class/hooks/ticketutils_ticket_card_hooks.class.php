@@ -661,4 +661,138 @@ class TicketUtilsTicketCardHooks
 
         return $w;
     }
+
+    /**
+     * @param   Ticket  $object
+     */
+    public static function add_document($object)
+    {
+        global $conf, $user, $db;
+
+        $formfile = new FormFile($db);
+
+        $filename = dol_sanitizeFileName($object->ref);
+        $filedir = $conf->ticket->dir_output . "/" . $filename;
+        $urlsource = $_SERVER["PHP_SELF"] . "?id=" . $object->id;
+        $genallowed = true;/* $user->rights->ficheinter->lire; */
+        $delallowed = true;/* $user->rights->ficheinter->creer; */
+		$model_pdf = getDolGlobalString('TICKETUTILS_DEFAULT_TICKET_PDF');
+		
+        $w = '';
+
+        $w .= '<div style="display: none">';
+        $w .= '<div id="ticket_docs_container">';
+        $w .= $formfile->showdocuments('ticket', $filename, $filedir, $urlsource, $genallowed, $delallowed, $model_pdf, 1, 0, 0, 28, 0, '', '', '', $soc->default_lang);
+        $w .= '</div>';
+        $w .= '</div>';
+
+        $w .= '<script src="'. DOL_URL_ROOT .'/custom/ticketutils/js/move_ticket_docs.js?'. time() .'"></script>';
+
+        return $w;
+    }
+
+    /**
+     * @param   Ticket  $object
+     */
+    public static function replace_build_doc($ticket)
+    {
+        global $langs, $conf, $db, $action;
+
+        require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/lib/ticketutils.lib.php';
+        require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/class/replace_ticket.class.php';
+        
+        $object = new ReplaceTicket($db);
+        
+        $id = $ticket->id;
+        
+        // Reload to get all modified line records and be ready for hooks
+        $ret = $object->fetch($id);
+        $ret = $object->fetch_thirdparty();
+        /*if (empty($object->id) || ! $object->id > 0)
+		{
+			dol_print_error('Object must have been loaded by a fetch');
+			exit;
+		}*/
+
+        // Save last template used to generate document
+        if (GETPOST('model', 'alpha'))
+        {
+            $object->model_pdf = GETPOST('model', 'alpha');
+        }
+
+        // Special case to force bank account
+        //if (property_exists($object, 'fk_bank'))
+        //{
+        if (GETPOST('fk_bank', 'int'))
+        {
+            // this field may come from an external module
+            $object->fk_bank = GETPOST('fk_bank', 'int');
+        }
+        elseif (!empty($object->fk_account))
+        {
+            $object->fk_bank = $object->fk_account;
+        }
+        //}
+
+        $outputlangs = $langs;
+        $newlang = '';
+
+        if (getDolGlobalInt('MAIN_MULTILANGS') && empty($newlang) && GETPOST('lang_id', 'aZ09'))
+        {
+            $newlang = GETPOST('lang_id', 'aZ09');
+        }
+        if (getDolGlobalInt('MAIN_MULTILANGS') && empty($newlang) && isset($object->thirdparty->default_lang))
+        {
+            $newlang = $object->thirdparty->default_lang; // for proposal, order, invoice, ...
+        }
+        if (getDolGlobalInt('MAIN_MULTILANGS') && empty($newlang) && isset($object->default_lang))
+        {
+            $newlang = $object->default_lang; // for thirdparty
+        }
+        if (!empty($newlang))
+        {
+            $outputlangs = new Translate("", $conf);
+            $outputlangs->setDefaultLang($newlang);
+        }
+
+        // To be sure vars is defined
+        if (empty($hidedetails))
+        {
+            $hidedetails = 0;
+        }
+        if (empty($hidedesc))
+        {
+            $hidedesc = 0;
+        }
+        if (empty($hideref))
+        {
+            $hideref = 0;
+        }
+        if (empty($moreparams))
+        {
+            $moreparams = null;
+        }
+
+        $result = $object->generateDocument($object->model_pdf, $outputlangs, $hidedetails, $hidedesc, $hideref, $moreparams);
+        if ($result <= 0)
+        {
+            setEventMessages($object->error, $object->errors, 'errors');
+            $action = '';
+        }
+        else
+        {
+            if (empty($donotredirect))
+            {    // This is set when include is done by bulk action "Bill Orders"
+                setEventMessages($langs->trans("FileGenerated"), null);
+
+                /*$urltoredirect = $_SERVER['REQUEST_URI'];
+				$urltoredirect = preg_replace('/#builddoc$/', '', $urltoredirect);
+				$urltoredirect = preg_replace('/action=builddoc&?/', '', $urltoredirect); // To avoid infinite loop
+                
+				header('Location: '.$urltoredirect.'#builddoc');
+				exit;*/
+            }
+            $action = '';
+        }
+    }
 }

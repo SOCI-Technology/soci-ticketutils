@@ -1,6 +1,7 @@
 <?php
 
 require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_lists.class.php';
+require_once DOL_DOCUMENT_ROOT . '/custom/ticketutils/class/ticket_extrafields.class.php';
 
 class TicketUtilsTicketListHooks
 {

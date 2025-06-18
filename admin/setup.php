@@ -240,6 +240,45 @@ echo '</tr>';
  * END INTERNAL EXTERNAL ON CREATION
  */
 
+/**
+ * USE TICKET PDF
+ */
+echo '<tr>';
+
+echo '<td>';
+echo $langs->trans('SetupUseTicketPDF');
+echo '</td>';
+
+echo '<td>';
+echo SociConstField::print('TICKETUTILS_USE_TICKET_PDF', 'boolean', $setup_action);
+echo '</td>';
+
+echo '</tr>';
+/**
+ * END USE TICKET PDF
+ */
+
+/**
+ * USE TICKET PDF
+ */
+if (getDolGlobalInt('TICKETUTILS_USE_TICKET_PDF'))
+{
+    echo '<tr>';
+    
+    echo '<td>';
+    echo $langs->trans('SetupDefaultTicketPDF');
+    echo '</td>';
+    
+    echo '<td>';
+    echo SociConstField::print('TICKETUTILS_DEFAULT_TICKET_PDF', 'string', $setup_action);
+    echo '</td>';
+    
+    echo '</tr>';
+}
+/**
+ * END DEFAULT TICKET PDF
+ */
+
 echo '</table>';
 
 print dol_get_fiche_end();
