@@ -235,8 +235,18 @@ class TicketUtilsLib
             {
                 unset($labels[Ticket::STATUS_NEED_MORE_INFO]);
             }
+
+            if ($ticket->status == self::TICKET_STATUS_ABANDON_REQUEST)
+            {
+                unset($labels[Ticket::STATUS_IN_PROGRESS], $labels[Ticket::STATUS_NEED_MORE_INFO]);
+            }
         }
 
+        if ($ticket->status == self::TICKET_STATUS_ABANDON_REQUEST)
+        {
+            $labels[self::TICKET_STATUS_ABANDON_REQUEST] = 'TicketStatusAbandonRequest';
+        }
+        
         $ticket->statuts = $labels;
         $ticket->statuts_short = $labels;
 
@@ -1299,43 +1309,12 @@ class TicketUtilsLib
     {
         global $db;
 
-        $right_sql = "";
-        $right_sql = "SELECT id FROM " . MAIN_DB_PREFIX . "rights_def WHERE libelle = 'PermAbandonTickets'";
-
-        $resql = $db->query($right_sql);
-
-        if (!$resql)
-        {
-            return [];
-        }
-
-        $obj = $db->fetch_object($resql);
-
-        if (!$obj)
-        {
-            return [];
-        }
-
-        $sql = "";
-        $sql .= "SELECT u.rowid as user_id FROM " . MAIN_DB_PREFIX . "user as u";
-        $sql .= " INNER JOIN " . MAIN_DB_PREFIX . "user_rights as ur";
-        $sql .= " ON u.rowid = ur.fk_user";
-        $sql .= " WHERE ur.fk_id = " . $obj->id;
-        $sql .= " GROUP BY u.rowid";
-
-        $resql = $db->query($sql);
-
-        $users = [];
-
-        for ($i = 0; $i < $db->num_rows($resql); $i++)
-        {
-            $obj = $db->fetch_object($resql);
-
-            $checker_user = new User($db);
-            $checker_user->fetch($obj->user_id);
-
-            $users[] = $checker_user;
-        }
+        require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib_queries.class.php';
+        
+        $right_list = [
+            'labels' => ['PermAbandonTickets']
+        ];
+        $users = SociLibQueries::get_users_with_rights($right_list);
 
         return $users;
     }

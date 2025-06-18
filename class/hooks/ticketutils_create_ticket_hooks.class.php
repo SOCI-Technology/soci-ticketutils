@@ -48,12 +48,24 @@ class TicketUtilsCreateTicketHooks
     {
         global $langs, $conf, $db, $user, $with_contact, $extrafields;
 
-        /* echo '<pre>';
-        print_r($_POST);
-        echo '</pre>';
+        if (!empty($_FILES))
+        {
+            include_once DOL_DOCUMENT_ROOT . '/core/lib/files.lib.php';
 
-        exit(); */
+            // Set tmp directory
+            // TODO Use a dedicated directory for temporary emails files
+            $vardir = $conf->ticket->dir_output;
+            $upload_dir_tmp = $vardir . '/temp/' . session_id();
+            if (!dol_is_dir($upload_dir_tmp))
+            {
+                dol_mkdir($upload_dir_tmp);
+            }
 
+            dol_add_file_process($upload_dir_tmp, 0, 0, 'addedfile', '', null, '', 0);
+        }
+
+        $id_to_use = getDolGlobalInt('TICKETUTILS_ONLY_ONE_ID') ? 'ref' : 'track_id';
+        
         $error = 0;
         $origin_email = GETPOST('email', 'alpha');
         if (empty($origin_email))
@@ -352,17 +364,17 @@ class TicketUtilsCreateTicketHooks
 
             // Send email to customer
 
-            $subject = '[' . $conf->global->MAIN_INFO_SOCIETE_NOM . '] ' . $langs->transnoentities('TicketNewEmailSubject', $object->ref, $object->ref);
+            $subject = '[' . $conf->global->MAIN_INFO_SOCIETE_NOM . '] ' . $langs->transnoentities('TicketNewEmailSubject', $object->ref, $object->$id_to_use);
             $message  = ($conf->global->TICKET_MESSAGE_MAIL_NEW ? $conf->global->TICKET_MESSAGE_MAIL_NEW : $langs->transnoentities('TicketNewEmailBody')) . '<br><br>';
             $message .= $langs->transnoentities('TicketNewEmailBodyInfosTicket') . '<br>';
 
-            $url_public_ticket = ($conf->global->TICKET_URL_PUBLIC_INTERFACE ? $conf->global->TICKET_URL_PUBLIC_INTERFACE . '/view.php' : dol_buildpath('/public/ticket/view.php', 2)) . '?track_id=' . $object->ref;
+            $url_public_ticket = ($conf->global->TICKET_URL_PUBLIC_INTERFACE ? $conf->global->TICKET_URL_PUBLIC_INTERFACE . '/view.php' : dol_buildpath('/public/ticket/view.php', 2)) . '?track_id=' . $object->$id_to_use;
 
             $infos_new_ticket = '';
 
             $infos_new_ticket .= $langs->transnoentities('TicketNewEmailBodyInfosTrackUrl');
             $infos_new_ticket .= '<br>';
-            $infos_new_ticket .= $langs->transnoentities('TicketNewEmailBodyInfosTrackId', '<a href="' . $url_public_ticket . '" rel="nofollow noopener">' . $object->ref . '</a>') . '<br>';
+            $infos_new_ticket .= $langs->transnoentities('TicketNewEmailBodyInfosTrackId', '<a href="' . $url_public_ticket . '" rel="nofollow noopener">' . $object->$id_to_use . '</a>') . '<br>';
             $infos_new_ticket .= '<br><br>';
 
             $message .= $infos_new_ticket;
@@ -399,8 +411,8 @@ class TicketUtilsCreateTicketHooks
             $sendto = $conf->global->TICKET_NOTIFICATION_EMAIL_TO;
             if ($sendto)
             {
-                $subject = '[' . $conf->global->MAIN_INFO_SOCIETE_NOM . '] ' . $langs->transnoentities('TicketNewEmailSubjectAdmin', $object->ref, $object->ref);
-                $message_admin = $langs->transnoentities('TicketNewEmailBodyAdmin', $object->ref) . '<br><br>';
+                $subject = '[' . $conf->global->MAIN_INFO_SOCIETE_NOM . '] ' . $langs->transnoentities('TicketNewEmailSubjectAdmin', $object->ref, $object->$id_to_use);
+                $message_admin = $langs->transnoentities('TicketNewEmailBodyAdmin', $object->$id_to_use) . '<br><br>';
                 $message_admin .= '<ul><li>' . $langs->trans('Title') . ' : ' . $object->subject . '</li>';
                 $message_admin .= '<li>' . $langs->trans('Type') . ' : ' . $object->type_label . '</li>';
                 $message_admin .= '<li>' . $langs->trans('Category') . ' : ' . $object->category_label . '</li>';
@@ -453,7 +465,7 @@ class TicketUtilsCreateTicketHooks
 
         // Make a redirect to avoid to have ticket submitted twice if we make back
         $messagetoshow = $langs->trans('MesgInfosPublicTicketCreatedWithTrackId', '{s1}', '{s2}');
-        $messagetoshow = str_replace(array('{s1}', '{s2}'), array('<strong>' . $object->ref . '</strong>', '<strong>' . $object->ref . '</strong>'), $messagetoshow);
+        $messagetoshow = str_replace(array('{s1}', '{s2}'), array('<strong>' . $object->$id_to_use . '</strong>', '<strong>' . $object->ref . '</strong>'), $messagetoshow);
         setEventMessages($messagetoshow, null, 'warnings');
         setEventMessages($langs->trans('PleaseRememberThisId'), null, 'warnings');
 
@@ -505,7 +517,7 @@ class TicketUtilsCreateTicketHooks
         global $langs;
 
         echo '<link rel="stylesheet" href="' . DOL_URL_ROOT . '/custom/ticketutils/css/ticket_verification.css">';
-        ?>
+?>
         <script>
             window.dolData = {
                 URL_ROOT: '<?php echo DOL_MAIN_URL_ROOT; ?>',
@@ -518,9 +530,9 @@ class TicketUtilsCreateTicketHooks
                 }
             };
         </script>
-        <?php
+<?php
         echo '<script src="' . DOL_URL_ROOT . '/custom/ticketutils/js/ticket_verification.js?' . time() . '"></script>';
-        
+
         echo '<div class="ticket-verification-modal" data-modal-id="ticket-verification-modal" style="display: none">';
 
         echo '<div class="ticket-verification-modal-content">';
@@ -547,21 +559,21 @@ class TicketUtilsCreateTicketHooks
          * BODY
          */
         echo '<div class="ticket-verification-modal-body">';
-        
+
         echo '<div>';
 
         echo '<div>';
         echo $langs->trans('TicketVerificationModalMessage');
         echo '</div>';
-        
+
         echo '<input name="verification-code" id="verification-code">';
-        
+
         echo '<button class="butAction" id="submit-verification-code">';
         echo $langs->trans('Submit');
         echo '</button>';
-        
+
         echo '</div>';
-        
+
         echo '</div>';
         /**
          * END BODY

@@ -52,3 +52,7 @@
 .rating-item.active {
     color: gold !important;
 }
+
+.butStatus .badge-status8 {
+    display: none;
+}

@@ -165,11 +165,8 @@ class ActionsTicketUtils
             {
                 if (GETPOST('save', 'alpha'))
                 {
-                    if ($conf->global->TICKETUTILS_ONLY_ONE_ID)
-                    {
-                        TicketUtilsCreateTicketHooks::replace_create_ticket($object, $action);
-                        return 1;
-                    }
+                    TicketUtilsCreateTicketHooks::replace_create_ticket($object, $action);
+                    return 1;
                 }
             }
 

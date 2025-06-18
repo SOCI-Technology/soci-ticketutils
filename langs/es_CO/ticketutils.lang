@@ -134,6 +134,7 @@ ErrorTicketTypeCode = Falta tipo de solicitud
 ErrorTicketSubject = Falta tema de la solicitud
 ErrorTicketMessage = Falta mensaje de la solicitud
 
+TicketVerification = Verificación de creación del ticket
 TicketVerificationModalMessage = Ingrese el código que recibió al correo electrónico con el que está realizando la solicitud
 
 #

@@ -536,6 +536,57 @@ if ($action == "view_ticket" || $action == "presend" || $action == "close" || $a
 			echo '</div>';
 		}
 
+
+		$sortfield = "position_name";
+		$upload_dir = $conf->ticket->dir_output . "/" . dol_sanitizeFileName($object->dao->ref);
+		$sortorder = 'ASC';
+
+		$formfile = new FormFile($db);
+
+		$filearray = dol_dir_list($upload_dir, "files", 0, '', '\.meta$', $sortfield, (strtolower($sortorder) == 'desc' ? SORT_DESC : SORT_ASC), 1);
+		$totalsize = 0;
+		foreach ($filearray as $key => $file)
+		{
+			$totalsize += $file['size'];
+		}
+
+		//$object->ref = $object->track_id;	// For compatibility we use track ID for directory
+		$modulepart = 'ticket';
+		$permissiontoadd = $user->rights->ticket->write;
+		$permtoedit = $user->rights->ticket->write;
+		$param = '&id=' . $object->dao->id;
+
+		ob_start();
+
+		// List of document
+		$formfile->list_of_documents(
+			$filearray,
+			$object->dao,
+			$modulepart,
+			$param,
+			0,
+			0, // relative path with no file. For example "0/1"
+			0,
+			0,
+			'',
+			0,
+			'',
+			'',
+			0,
+			0,
+			$upload_dir,
+			$sortfield,
+			$sortorder,
+			1,
+			0,
+			1
+		);
+
+		$documents_html = ob_get_clean();
+		$documents_html = str_replace('document.php?', 'custom/ticketutils/public/ticket/document.php?track_id=' . $object->dao->$id_to_use . '&email=' . $email . '&', $documents_html);
+
+		echo $documents_html;
+
 		// Message list
 		echo load_fiche_titre($langs->trans('TicketMessagesList'), '', 'conversation');
 		$object->viewTicketMessages(false, true, $object->dao);
