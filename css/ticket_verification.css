@@ -108,3 +108,7 @@
     font-size: 14pt;
     font-weight: bold;
 }
+
+#verification-code {
+    border: solid 1px black;
+}

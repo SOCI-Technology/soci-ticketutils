@@ -367,7 +367,7 @@ class TicketUtilsLib
                 throw new Exception('No email defined');
             }
 
-            $subject = '[' . $mysoc->getFullName($langs) . '] - ' .  $langs->transnoentitiesnoconv('AwaitingValidationSubject', $ticket->ref);
+            $subject = '[' . $mysoc->getFullName($langs) . '] ' .  $langs->transnoentitiesnoconv('AwaitingValidationSubject', $ticket->ref);
 
             $msg = '';
 
@@ -394,7 +394,7 @@ class TicketUtilsLib
             $mail = new CMailFile(
                 $subject,
                 $to,
-                $user->email,
+                $from,
                 $msg,
                 [],
                 [],

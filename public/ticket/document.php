@@ -69,7 +69,7 @@ if (isset($_GET["hashp"]) && !defined("NOLOGIN"))
     }
 }
 // Some value of modulepart can be used to get resources that are public so no login are required.
-if ((isset($_GET["modulepart"]) && $_GET["modulepart"] == 'medias'))
+if ((isset($_GET["modulepart"]) && $_GET["modulepart"] == 'ticket'))
 {
     if (!defined("NOLOGIN"))
     {

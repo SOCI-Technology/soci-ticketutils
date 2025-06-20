@@ -52,55 +52,7 @@ require_once DOL_DOCUMENT_ROOT . '/custom/socilib/soci_lib.class.php';
 $langs->loadLangs(array("errors", "admin", "main", "companies", "resource", "holiday", "accountancy", "hrm", "orders", "contracts", "projects", "propal", "bills", "interventions", "ticket"));
 
 $dict = GETPOST('dict');
-
-$ticket_dicts = [
-	45 => 'types',
-	46 => 'severity',
-	47 => 'groups'
-];
-
-$id = array_search($dict, $ticket_dicts);
-
-if (!$id)
-{
-	$id = GETPOST('id');
-
-	if (!isset($ticket_dicts[$id]))
-	{
-		header('Location: ' . DOL_URL_ROOT . '/index.php');
-		exit();
-	}
-
-	$dict = $ticket_dicts[$id];
-}
-
-switch ($dict)
-{
-	case 'types':
-		{
-			$id = 45;
-			break;
-		}
-	case 'severity':
-		{
-			$id = 46;
-			break;
-		}
-	case 'groups':
-		{
-			$id = 47;
-			break;
-		}
-	default:
-		{
-			$id = GETPOST('id');
-
-			if (!in_array($id, [45, 46, 47]))
-			{
-				exit();
-			}
-		}
-}
+$id = GETPOST('id');
 
 
 $action = GETPOST('action', 'alpha') ? GETPOST('action', 'alpha') : 'view';
@@ -110,18 +62,6 @@ $entity = GETPOST('entity', 'int');
 $code = GETPOST('code', 'alpha');
 
 $allowed = $user->admin;
-if ($id == 7 && $user->hasRight('accounting', 'chartofaccount'))
-{
-	$allowed = 1; // Tax page allowed to manager of chart account
-}
-if ($id == 10 && $user->hasRight('accounting', 'chartofaccount'))
-{
-	$allowed = 1; // Vat page allowed to manager of chart account
-}
-if ($id == 17 && $user->hasRight('accounting', 'chartofaccount'))
-{
-	$allowed = 1; // Dictionary with type of expense report and accounting account allowed to manager of chart account
-}
 
 if (!empty($user->rights->ticketutils->ans->write))
 {
@@ -649,6 +589,55 @@ $tabcomplete = array(
 
 // Complete all arrays with entries found into modules
 complete_dictionary_with_modules($taborder, $tabname, $tablib, $tabsql, $tabsqlsort, $tabfield, $tabfieldvalue, $tabfieldinsert, $tabrowid, $tabcond, $tabhelp, $tabcomplete);
+
+if ($dict)
+{
+	$ticket_dict_id = '';
+
+	switch ($dict)
+	{
+		case 'types':
+			{
+				$ticket_dict_id = array_search('c_ticket_type', $tabname);
+				break;
+			}
+		case 'severity':
+			{
+				$ticket_dict_id = array_search('c_ticket_severity', $tabname);
+				break;
+			}
+		case 'groups':
+			{
+				$ticket_dict_id = array_search('c_ticket_category', $tabname);
+				break;
+			}
+	}
+
+	$id = $ticket_dict_id;
+}
+else
+{
+	$dict_table = $tabname[$id];
+
+	switch ($dict_table)
+	{
+		case 'c_ticket_type':
+			{
+				$dict = 'types';
+				break;
+			}
+		case 'c_ticket_severity':
+			{
+				$dict = 'severity';
+				break;
+			}
+		case 'c_ticket_category':
+			{
+				$dict = 'groups';
+				break;
+			}
+	}
+}
 
 // Complete the table $tabcomplete
 $i = 0;
